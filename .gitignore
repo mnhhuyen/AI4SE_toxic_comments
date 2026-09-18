@@ -4,14 +4,28 @@ __pycache__/
 .venv/
 *.py[cod]
 
-# data/raw/*
-data/processed/*
-data/k_fold/*
-data/embeddings/*
-!data/README.md
-!data/embeddings/
-!data/embeddings/README.md
+# Keep directory structure and documentation, not generated artifacts.
+# data/raw files are currently tracked and remain unchanged.
+/data/processed/**
+/data/k_fold/**
+/data/embeddings/**
+/models/**
+/results/**
 
-models/*
-results/*
-!results/.gitkeep
+!/data/processed/**/
+!/data/k_fold/**/
+!/data/embeddings/**/
+!/models/**/
+!/results/**/
+
+!/data/processed/**/.gitkeep
+!/data/k_fold/**/.gitkeep
+!/data/embeddings/**/.gitkeep
+!/models/**/.gitkeep
+!/results/**/.gitkeep
+
+!/data/processed/**/README.md
+!/data/k_fold/**/README.md
+!/data/embeddings/**/README.md
+!/models/**/README.md
+!/results/**/README.md
