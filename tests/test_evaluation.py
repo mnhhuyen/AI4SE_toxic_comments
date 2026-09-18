@@ -1,7 +1,7 @@
 import pandas as pd
 
 from toxic_comments.config import HEAVY_TEXT_COLUMN, ID_COLUMN, LABEL_COLUMNS, TEXT_COLUMN
-from toxic_comments.folds import (
+from toxic_comments.splits import (
     make_kfold_splits,
     make_stratified_kfold_splits,
     save_kfold_datasets,

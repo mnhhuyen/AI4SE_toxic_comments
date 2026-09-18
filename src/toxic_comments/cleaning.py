@@ -286,6 +286,21 @@ FEATURE_COLUMNS = [
 ]
 
 
+def validate_training_data(data: pd.DataFrame) -> pd.DataFrame:
+    """Validate and normalize the columns needed by the classifiers."""
+
+    required_columns = [TEXT_COLUMN, *LABEL_COLUMNS]
+    missing = [column for column in required_columns if column not in data.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {', '.join(missing)}")
+
+    normalized = data.copy()
+    normalized[TEXT_COLUMN] = normalized[TEXT_COLUMN].fillna("").astype(str)
+    for label in LABEL_COLUMNS:
+        normalized[label] = pd.to_numeric(normalized[label], errors="coerce").fillna(0).astype(int)
+    return normalized
+
+
 def normalize_unicode(text: str) -> str:
     """NFKC compat-decompose (Ｆuck -> Fuck) + drop control characters."""
     text = unicodedata.normalize("NFKC", text)

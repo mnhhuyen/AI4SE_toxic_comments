@@ -1,7 +1,7 @@
 import pandas as pd
 
 from toxic_comments.config import HEAVY_TEXT_COLUMN, LABEL_COLUMNS, LIGHT_TEXT_COLUMN, TEXT_COLUMN
-from toxic_comments.cleaning import clean_heavy, clean_light, process_cleaning
+from toxic_comments.cleaning import clean_heavy, clean_light, process_cleaning, validate_training_data
 
 
 def test_clean_light_removes_markup_and_web_noise():
@@ -39,3 +39,17 @@ def test_process_cleaning_adds_clean_text_and_feature_columns():
     assert HEAVY_TEXT_COLUMN in cleaned.columns
     assert "caps_ratio" in cleaned.columns
     assert cleaned.loc[0, HEAVY_TEXT_COLUMN] == "you awful"
+
+
+def test_validate_training_data_fills_missing_text_and_labels():
+    data = pd.DataFrame(
+        {
+            TEXT_COLUMN: [None],
+            **{label: [None] for label in LABEL_COLUMNS},
+        }
+    )
+
+    validated = validate_training_data(data)
+
+    assert validated.loc[0, TEXT_COLUMN] == ""
+    assert validated[LABEL_COLUMNS].iloc[0].tolist() == [0, 0, 0, 0, 0, 0]
