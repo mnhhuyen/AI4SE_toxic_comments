@@ -17,7 +17,11 @@ from toxic_comments.config import (
     PROCESSED_DATA_DIR,
     RESULTS_DIR,
 )
-from toxic_comments.evaluation import evaluate_predictions
+from toxic_comments.evaluation import (
+    evaluate_per_label,
+    evaluate_predictions,
+    predict_scores,
+)
 from toxic_comments.splits import train_validation_test_split
 from toxic_comments.models.registry import build_models
 
@@ -71,8 +75,25 @@ def evaluate_model(estimator, data: pd.DataFrame, text_column: str) -> dict[str,
     x_test = data[text_column].fillna("").astype(str)
     y_true = data[LABEL_COLUMNS].to_numpy()
     y_pred = estimator.predict(x_test)
-    y_score = _predict_scores(estimator, x_test)
+    y_score = predict_scores(estimator, x_test)
     return evaluate_predictions(y_true, y_pred, y_score)
+
+
+def evaluate_model_per_label(
+    estimator, data: pd.DataFrame, text_column: str
+) -> pd.DataFrame:
+    """Evaluate one fitted model label by label.
+
+    threat and identity_hate are two orders of magnitude rarer than toxic, so
+    the aggregate metrics can look healthy while those labels are never
+    predicted at all.
+    """
+
+    x_test = data[text_column].fillna("").astype(str)
+    y_true = data[LABEL_COLUMNS].to_numpy()
+    y_pred = estimator.predict(x_test)
+    y_score = predict_scores(estimator, x_test)
+    return evaluate_per_label(y_true, y_pred, y_score)
 
 
 def train_holdout(
@@ -109,6 +130,7 @@ def train_holdout(
     )
 
     metrics = []
+    per_label_frames = []
     for split_name, split_data in [
         ("validation", validation_data),
         ("test", test_data),
@@ -121,10 +143,18 @@ def train_holdout(
         row.update(evaluate_model(estimator, split_data, text_column=text_column))
         metrics.append(row)
 
+        per_label = evaluate_model_per_label(estimator, split_data, text_column=text_column)
+        per_label.insert(0, "split", split_name)
+        per_label.insert(0, "model_name", model_name)
+        per_label_frames.append(per_label)
+
     output_path = save_model(estimator, output_dir / f"{model_name}.joblib")
     metrics_frame = pd.DataFrame(metrics)
     results_dir.mkdir(parents=True, exist_ok=True)
     metrics_frame.to_csv(results_dir / f"{model_name}_holdout_metrics.csv", index=False)
+    pd.concat(per_label_frames, ignore_index=True).to_csv(
+        results_dir / f"{model_name}_holdout_per_label.csv", index=False
+    )
     return output_path, metrics_frame
 
 
@@ -143,6 +173,7 @@ def train_from_folds(
 
     model_paths: list[Path] = []
     metrics = []
+    per_label_frames = []
 
     for fold_dir in sorted(folds_dir.glob("fold_*")):
         train_path = fold_dir / "train.csv"
@@ -172,6 +203,11 @@ def train_from_folds(
         row.update(evaluate_model(estimator, test_data, text_column=text_column))
         metrics.append(row)
 
+        per_label = evaluate_model_per_label(estimator, test_data, text_column=text_column)
+        per_label.insert(0, "fold", fold_name)
+        per_label.insert(0, "model_name", model_name)
+        per_label_frames.append(per_label)
+
         model_paths.append(
             save_model(estimator, output_dir / fold_name / f"{model_name}.joblib")
         )
@@ -182,6 +218,9 @@ def train_from_folds(
     metrics_frame = pd.DataFrame(metrics)
     results_dir.mkdir(parents=True, exist_ok=True)
     metrics_frame.to_csv(results_dir / f"{model_name}_fold_metrics.csv", index=False)
+    pd.concat(per_label_frames, ignore_index=True).to_csv(
+        results_dir / f"{model_name}_fold_per_label.csv", index=False
+    )
     return model_paths, metrics_frame
 
 
@@ -308,27 +347,6 @@ def main() -> None:
     )
     output_path = save_model(estimator, output_dir / f"{args.model}.joblib")
     print(f"Saved model: {output_path}")
-
-
-def _predict_scores(estimator, x_test: pd.Series):
-    if not hasattr(estimator, "predict_proba"):
-        return None
-
-    probabilities = estimator.predict_proba(x_test)
-    if isinstance(probabilities, list):
-        scores = []
-        for label_index, class_probability in enumerate(probabilities):
-            estimators = getattr(estimator, "estimators_", [])
-            classes = getattr(estimators[label_index], "classes_", None)
-            if classes is None or 1 not in classes:
-                scores.append([0.0] * class_probability.shape[0])
-                continue
-
-            positive_class_index = int((classes == 1).nonzero()[0][0])
-            scores.append(class_probability[:, positive_class_index])
-        return pd.DataFrame(scores).T.to_numpy()
-
-    return probabilities
 
 
 if __name__ == "__main__":
