@@ -1,9 +1,4 @@
-"""Per-label decision threshold tuning.
-
-predict() applies a fixed 0.5 cut-off to all six labels. That is the wrong
-cut-off here twice over: the labels are heavily imbalanced, and the linear
-models train with class_weight="balanced".
-"""
+"""Per-label decision threshold tuning."""
 
 from __future__ import annotations
 
@@ -21,11 +16,7 @@ DEFAULT_THRESHOLD = 0.5
 
 
 def candidate_thresholds(scores: np.ndarray, n_candidates: int = 100) -> np.ndarray:
-    """Return threshold candidates drawn from the score distribution.
-
-    Quantiles rather than a fixed 0..1 grid, so this also works for the
-    unbounded output of decision_function.
-    """
+    """Return threshold candidates drawn from the score distribution."""
 
     return np.unique(np.quantile(scores, np.linspace(0.01, 0.99, n_candidates)))
 
@@ -44,7 +35,7 @@ def tune_thresholds(
     for index in range(y_true.shape[1]):
         truth = y_true[:, index]
         scores = y_score[:, index]
-        if truth.sum() == 0:
+        if truth.sum() == 0 or np.unique(scores).size < 2:
             continue
 
         best_threshold, best_f1 = DEFAULT_THRESHOLD, -1.0
@@ -76,8 +67,6 @@ def thresholds_to_frame(
 
 
 def _wrapped_has(attribute: str):
-    """Only expose a delegated method the wrapped estimator really has."""
-
     def check(self) -> bool:
         return hasattr(self.estimator, attribute)
 
@@ -85,11 +74,7 @@ def _wrapped_has(attribute: str):
 
 
 class ThresholdedClassifier(BaseEstimator, ClassifierMixin):
-    """Replace an estimator's 0.5 cut-off with tuned per-label thresholds.
-
-    Fits twice on purpose: once on a slice so the thresholds are chosen on
-    held-out scores, then on everything so no training rows are wasted.
-    """
+    """Replace an estimator's 0.5 cut-off with tuned per-label thresholds."""
 
     def __init__(
         self,
@@ -115,6 +100,7 @@ class ThresholdedClassifier(BaseEstimator, ClassifierMixin):
             shuffle=True,
         )
 
+        # tune on held-out scores, then refit on everything
         tuner = clone(self.estimator)
         tuner.fit(self._subset(x, train_index), y[train_index])
         scores = predict_scores(tuner, self._subset(x, validation_index))

@@ -12,22 +12,16 @@ from toxic_comments.cleaning import build_features
 
 
 class HandCraftedFeatures(BaseEstimator, TransformerMixin):
-    """Scale the features of build_features() into a sparse matrix.
-
-    Feed this the RAW text column: casing and punctuation are the signal,
-    and heavy cleaning deletes exactly those characters.
-    """
+    """Scale build_features() output into a sparse matrix. Expects raw text."""
 
     def _frame(self, x) -> pd.DataFrame:
         series = pd.Series(x).reset_index(drop=True).fillna("").astype(str)
-        features = build_features(series)
-        return features.replace([np.inf, -np.inf], 0.0).fillna(0.0)
+        return build_features(series).replace([np.inf, -np.inf], 0.0).fillna(0.0)
 
     def fit(self, x, y=None):
         features = self._frame(x)
         self.feature_names_ = list(features.columns)
-        # clip=True keeps the output non-negative for Naive Bayes even when a
-        # test comment is longer than anything seen during fit.
+        # clip keeps the output non-negative for Naive Bayes on unseen extremes
         self.scaler_ = MinMaxScaler(clip=True).fit(features.to_numpy(dtype=float))
         return self
 

@@ -25,15 +25,13 @@ class NbFeaturer(BaseEstimator, TransformerMixin):
 
     def fit(self, x, y):
         labels = np.asarray(y).ravel()
-        if not sparse.issparse(x):
-            x = sparse.csr_matrix(x)
+        x = sparse.csr_matrix(x) if not sparse.issparse(x) else x
         ratio = self._rate(x, labels == 1) / self._rate(x, labels == 0)
         self.log_ratio_ = sparse.csr_matrix(np.log(ratio))
         return self
 
     def transform(self, x) -> sparse.csr_matrix:
-        if not sparse.issparse(x):
-            x = sparse.csr_matrix(x)
+        x = sparse.csr_matrix(x) if not sparse.issparse(x) else x
         return x.multiply(self.log_ratio_).tocsr()
 
 
@@ -42,11 +40,7 @@ def build_nbsvm(
     c_value: float = 4.0,
     alpha: float = 1.0,
 ) -> Pipeline:
-    """Return TF-IDF with per-label NB weighting and logistic regression.
-
-    The NB ratio is label specific, so it sits inside the one-vs-rest wrapper
-    while the vectorizers above it are fitted once.
-    """
+    """Return TF-IDF with per-label NB weighting and logistic regression."""
 
     per_label = Pipeline(
         steps=[

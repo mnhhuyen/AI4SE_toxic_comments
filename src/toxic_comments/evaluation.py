@@ -17,12 +17,7 @@ from toxic_comments.config import LABEL_COLUMNS
 
 
 def predict_scores(estimator, x) -> np.ndarray | None:
-    """Return per-label continuous scores for ranking metrics.
-
-    Probabilities are preferred. Models such as LinearSVC have no
-    predict_proba, and without the decision_function fallback they would drop
-    out of every ROC-AUC comparison.
-    """
+    """Return per-label continuous scores for ranking metrics."""
 
     if hasattr(estimator, "predict_proba"):
         try:
@@ -46,7 +41,6 @@ def _normalize_proba(estimator, probabilities) -> np.ndarray:
         probabilities = np.asarray(probabilities)
         return probabilities[:, :, 1].T if probabilities.ndim == 3 else probabilities
 
-    # MultiOutputClassifier returns one (n_samples, n_classes) array per label.
     estimators = getattr(estimator, "estimators_", [])
     if not estimators:
         steps = getattr(estimator, "steps", [])
@@ -92,18 +86,20 @@ def evaluate_predictions(
     }
 
 
+def summarize_folds(metrics: pd.DataFrame, group_by: str = "model_name") -> pd.DataFrame:
+    """Return mean and standard deviation of fold metrics per model."""
+
+    numeric = metrics.select_dtypes("number").columns.difference([group_by])
+    return metrics.groupby(group_by)[list(numeric)].agg(["mean", "std"]).round(4)
+
+
 def evaluate_per_label(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     y_score: np.ndarray | None = None,
     label_columns: list[str] | None = None,
 ) -> pd.DataFrame:
-    """Break the metrics down per label.
-
-    The aggregates hide the interesting part: threat and identity_hate are two
-    orders of magnitude rarer than toxic, so a healthy micro-F1 can sit on top
-    of a model that never predicts them.
-    """
+    """Compute precision, recall, F1 and ROC-AUC for each label."""
 
     label_columns = label_columns or LABEL_COLUMNS
     y_true = np.asarray(y_true)

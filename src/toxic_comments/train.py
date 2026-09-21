@@ -24,6 +24,7 @@ from toxic_comments.evaluation import (
 )
 from toxic_comments.splits import train_validation_test_split
 from toxic_comments.models.registry import build_models
+from toxic_comments.thresholds import ThresholdedClassifier
 
 
 def train_model(
@@ -34,6 +35,7 @@ def train_model(
     embedding_dir: Path = EMBEDDINGS_DIR,
     max_embedding_vectors: int | None = None,
     embedding_pooling: str = "mean",
+    tune_thresholds: bool = False,
 ):
     """Fit one registered model on a labeled dataframe."""
 
@@ -55,6 +57,9 @@ def train_model(
         raise ValueError(f"Unknown model '{model_name}'. Available models: {available}")
 
     estimator = models[model_name]
+    if tune_thresholds:
+        estimator = ThresholdedClassifier(estimator)
+
     x_train = data[text_column].fillna("").astype(str)
     y_train = data[LABEL_COLUMNS].to_numpy()
     estimator.fit(x_train, y_train)
@@ -69,31 +74,37 @@ def save_model(estimator, output_path: Path) -> Path:
     return output_path
 
 
-def evaluate_model(estimator, data: pd.DataFrame, text_column: str) -> dict[str, float | None]:
-    """Evaluate one fitted model on a labeled dataframe."""
-
+def _predictions(estimator, data: pd.DataFrame, text_column: str):
     x_test = data[text_column].fillna("").astype(str)
     y_true = data[LABEL_COLUMNS].to_numpy()
     y_pred = estimator.predict(x_test)
-    y_score = predict_scores(estimator, x_test)
-    return evaluate_predictions(y_true, y_pred, y_score)
+    return y_true, y_pred, predict_scores(estimator, x_test)
+
+
+def evaluate_model(estimator, data: pd.DataFrame, text_column: str) -> dict[str, float | None]:
+    """Evaluate one fitted model on a labeled dataframe."""
+
+    return evaluate_predictions(*_predictions(estimator, data, text_column))
 
 
 def evaluate_model_per_label(
     estimator, data: pd.DataFrame, text_column: str
 ) -> pd.DataFrame:
-    """Evaluate one fitted model label by label.
+    """Evaluate one fitted model label by label."""
 
-    threat and identity_hate are two orders of magnitude rarer than toxic, so
-    the aggregate metrics can look healthy while those labels are never
-    predicted at all.
-    """
+    return evaluate_per_label(*_predictions(estimator, data, text_column))
 
-    x_test = data[text_column].fillna("").astype(str)
-    y_true = data[LABEL_COLUMNS].to_numpy()
-    y_pred = estimator.predict(x_test)
-    y_score = predict_scores(estimator, x_test)
-    return evaluate_per_label(y_true, y_pred, y_score)
+
+def evaluate_model_detailed(
+    estimator, data: pd.DataFrame, text_column: str
+) -> tuple[dict[str, float | None], pd.DataFrame]:
+    """Return aggregate and per-label metrics from one prediction pass."""
+
+    y_true, y_pred, y_score = _predictions(estimator, data, text_column)
+    return (
+        evaluate_predictions(y_true, y_pred, y_score),
+        evaluate_per_label(y_true, y_pred, y_score),
+    )
 
 
 def train_holdout(
@@ -106,6 +117,7 @@ def train_holdout(
     embedding_dir: Path = EMBEDDINGS_DIR,
     max_embedding_vectors: int | None = None,
     embedding_pooling: str = "mean",
+    tune_thresholds: bool = False,
     validation_size: float = 0.1,
     test_size: float = 0.1,
     random_state: int = 42,
@@ -127,6 +139,7 @@ def train_holdout(
         embedding_dir=embedding_dir,
         max_embedding_vectors=max_embedding_vectors,
         embedding_pooling=embedding_pooling,
+        tune_thresholds=tune_thresholds,
     )
 
     metrics = []
@@ -135,15 +148,17 @@ def train_holdout(
         ("validation", validation_data),
         ("test", test_data),
     ]:
-        row = {
-            "model_name": model_name,
-            "split": split_name,
-            "rows": len(split_data),
-        }
-        row.update(evaluate_model(estimator, split_data, text_column=text_column))
-        metrics.append(row)
-
-        per_label = evaluate_model_per_label(estimator, split_data, text_column=text_column)
+        aggregate, per_label = evaluate_model_detailed(
+            estimator, split_data, text_column=text_column
+        )
+        metrics.append(
+            {
+                "model_name": model_name,
+                "split": split_name,
+                "rows": len(split_data),
+                **aggregate,
+            }
+        )
         per_label.insert(0, "split", split_name)
         per_label.insert(0, "model_name", model_name)
         per_label_frames.append(per_label)
@@ -168,6 +183,7 @@ def train_from_folds(
     embedding_dir: Path = EMBEDDINGS_DIR,
     max_embedding_vectors: int | None = None,
     embedding_pooling: str = "mean",
+    tune_thresholds: bool = False,
 ) -> tuple[list[Path], pd.DataFrame]:
     """Train one model on each fold_N/train.csv and evaluate fold_N/test.csv."""
 
@@ -192,18 +208,21 @@ def train_from_folds(
             embedding_dir=embedding_dir,
             max_embedding_vectors=max_embedding_vectors,
             embedding_pooling=embedding_pooling,
+            tune_thresholds=tune_thresholds,
         )
 
-        row = {
-            "model_name": model_name,
-            "fold": fold_name,
-            "split": "test",
-            "rows": len(test_data),
-        }
-        row.update(evaluate_model(estimator, test_data, text_column=text_column))
-        metrics.append(row)
-
-        per_label = evaluate_model_per_label(estimator, test_data, text_column=text_column)
+        aggregate, per_label = evaluate_model_detailed(
+            estimator, test_data, text_column=text_column
+        )
+        metrics.append(
+            {
+                "model_name": model_name,
+                "fold": fold_name,
+                "split": "test",
+                "rows": len(test_data),
+                **aggregate,
+            }
+        )
         per_label.insert(0, "fold", fold_name)
         per_label.insert(0, "model_name", model_name)
         per_label_frames.append(per_label)
@@ -284,6 +303,11 @@ def parse_args() -> argparse.Namespace:
         default=RESULTS_DIR,
         help="Directory where metric CSV files are written.",
     )
+    parser.add_argument(
+        "--tune-thresholds",
+        action="store_true",
+        help="Fit one decision threshold per label instead of a shared 0.5.",
+    )
     parser.add_argument("--validation-size", type=float, default=0.1)
     parser.add_argument("--test-size", type=float, default=0.1)
     parser.add_argument("--random-state", type=int, default=42)
@@ -311,6 +335,7 @@ def main() -> None:
             embedding_dir=args.embedding_dir,
             max_embedding_vectors=args.max_embedding_vectors,
             embedding_pooling=args.embedding_pooling,
+            tune_thresholds=args.tune_thresholds,
         )
         print(f"Saved {len(model_paths)} fold models to {output_dir}")
         print(metrics)
@@ -328,6 +353,7 @@ def main() -> None:
             embedding_dir=args.embedding_dir,
             max_embedding_vectors=args.max_embedding_vectors,
             embedding_pooling=args.embedding_pooling,
+            tune_thresholds=args.tune_thresholds,
             validation_size=args.validation_size,
             test_size=args.test_size,
             random_state=args.random_state,
@@ -344,6 +370,7 @@ def main() -> None:
         embedding_dir=args.embedding_dir,
         max_embedding_vectors=args.max_embedding_vectors,
         embedding_pooling=args.embedding_pooling,
+        tune_thresholds=args.tune_thresholds,
     )
     output_path = save_model(estimator, output_dir / f"{args.model}.joblib")
     print(f"Saved model: {output_path}")

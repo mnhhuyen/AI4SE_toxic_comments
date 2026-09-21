@@ -29,11 +29,7 @@ def build_char_vectorizer(
     ngram_range: tuple[int, int] = (3, 5),
     min_df: int = 2,
 ) -> TfidfVectorizer:
-    """Return a character n-gram TF-IDF vectorizer bounded to words.
-
-    Character n-grams catch masked profanity (f**k, fuuuck) that word
-    tokenisation splits apart.
-    """
+    """Return a character n-gram TF-IDF vectorizer bounded to words."""
 
     return TfidfVectorizer(
         analyzer="char_wb",

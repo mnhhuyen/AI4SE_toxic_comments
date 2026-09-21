@@ -12,13 +12,8 @@ from toxic_comments.models.handcrafted import HandCraftedFeatures
 from toxic_comments.models.vectorizers import build_word_char_union
 
 
-def build_word_char_logistic_regression(
-    max_features: int = 50_000,
-    c_value: float = 4.0,
-) -> Pipeline:
-    """Return word + character TF-IDF with one-vs-rest logistic regression."""
-
-    classifier = OneVsRestClassifier(
+def _one_vs_rest_logistic(c_value: float) -> OneVsRestClassifier:
+    return OneVsRestClassifier(
         LogisticRegression(
             C=c_value,
             solver="liblinear",
@@ -27,11 +22,21 @@ def build_word_char_logistic_regression(
             random_state=42,
         )
     )
-    return Pipeline(
-        steps=[
-            ("features", build_word_char_union(max_features=max_features)),
-            ("classifier", classifier),
-        ]
+
+
+def _pipeline(features, classifier) -> Pipeline:
+    return Pipeline(steps=[("features", features), ("classifier", classifier)])
+
+
+def build_word_char_logistic_regression(
+    max_features: int = 50_000,
+    c_value: float = 4.0,
+) -> Pipeline:
+    """Return word + character TF-IDF with one-vs-rest logistic regression."""
+
+    return _pipeline(
+        build_word_char_union(max_features=max_features),
+        _one_vs_rest_logistic(c_value),
     )
 
 
@@ -39,38 +44,19 @@ def build_raw_text_logistic_regression(
     max_features: int = 50_000,
     c_value: float = 4.0,
 ) -> Pipeline:
-    """Return word + character TF-IDF plus numeric features.
+    """Return TF-IDF plus numeric features. Train with --text-column comment_text."""
 
-    Train this one with --text-column comment_text: the numeric features
-    measure casing and punctuation, which the cleaned columns no longer have.
-    """
-
-    classifier = OneVsRestClassifier(
-        LogisticRegression(
-            C=c_value,
-            solver="liblinear",
-            class_weight="balanced",
-            max_iter=1000,
-            random_state=42,
-        )
-    )
     features = FeatureUnion(
         [
             ("tfidf", build_word_char_union(max_features=max_features)),
             ("handcrafted", HandCraftedFeatures()),
         ]
     )
-    return Pipeline(steps=[("features", features), ("classifier", classifier)])
+    return _pipeline(features, _one_vs_rest_logistic(c_value))
 
 
-def build_tfidf_linear_svc(
-    max_features: int = 50_000,
-    c_value: float = 0.5,
-) -> Pipeline:
-    """Return word + character TF-IDF with a linear SVM.
-
-    Exposes decision_function rather than predict_proba.
-    """
+def build_tfidf_linear_svc(max_features: int = 50_000, c_value: float = 0.5) -> Pipeline:
+    """Return word + character TF-IDF with a linear SVM."""
 
     classifier = OneVsRestClassifier(
         LinearSVC(
@@ -81,18 +67,10 @@ def build_tfidf_linear_svc(
             random_state=42,
         )
     )
-    return Pipeline(
-        steps=[
-            ("features", build_word_char_union(max_features=max_features)),
-            ("classifier", classifier),
-        ]
-    )
+    return _pipeline(build_word_char_union(max_features=max_features), classifier)
 
 
-def build_tfidf_sgd_logistic(
-    max_features: int = 50_000,
-    alpha: float = 1e-6,
-) -> Pipeline:
+def build_tfidf_sgd_logistic(max_features: int = 50_000, alpha: float = 1e-6) -> Pipeline:
     """Return word + character TF-IDF with SGD-trained logistic regression."""
 
     classifier = OneVsRestClassifier(
@@ -105,23 +83,13 @@ def build_tfidf_sgd_logistic(
             random_state=42,
         )
     )
-    return Pipeline(
-        steps=[
-            ("features", build_word_char_union(max_features=max_features)),
-            ("classifier", classifier),
-        ]
-    )
+    return _pipeline(build_word_char_union(max_features=max_features), classifier)
 
 
-def build_tfidf_complement_nb(
-    max_features: int = 50_000,
-    alpha: float = 0.5,
-) -> Pipeline:
+def build_tfidf_complement_nb(max_features: int = 50_000, alpha: float = 0.5) -> Pipeline:
     """Return word + character TF-IDF with Complement Naive Bayes."""
 
-    return Pipeline(
-        steps=[
-            ("features", build_word_char_union(max_features=max_features)),
-            ("classifier", OneVsRestClassifier(ComplementNB(alpha=alpha))),
-        ]
+    return _pipeline(
+        build_word_char_union(max_features=max_features),
+        OneVsRestClassifier(ComplementNB(alpha=alpha)),
     )

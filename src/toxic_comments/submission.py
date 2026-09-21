@@ -1,8 +1,4 @@
-"""Kaggle submission files.
-
-The competition metric is the mean column-wise ROC-AUC, so a submission holds
-probabilities, not 0/1 labels.
-"""
+"""Kaggle submission files."""
 
 from __future__ import annotations
 
@@ -23,10 +19,7 @@ UNLABELED_MARKER = -1
 
 
 def to_probability(scores: np.ndarray) -> np.ndarray:
-    """Squash decision values into [0, 1], leaving probabilities untouched.
-
-    The squash is monotone, so it does not change the ranking the metric uses.
-    """
+    """Squash decision values into [0, 1], leaving probabilities untouched."""
 
     scores = np.asarray(scores, dtype=float)
     if scores.size and scores.min() >= 0.0 and scores.max() <= 1.0:
@@ -50,10 +43,7 @@ def build_submission_frame(ids, y_score: np.ndarray) -> pd.DataFrame:
 
 
 def select_scored_rows(test_data: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
-    """Drop the test rows Kaggle marked -1 and never scored.
-
-    About 89k of the 153k rows carry the marker, leaving 63,978 labeled ones.
-    """
+    """Drop the test rows Kaggle marked -1 and never scored."""
 
     merged = test_data.merge(labels, on=ID_COLUMN, how="inner", suffixes=("", "_label"))
     scored = (merged[LABEL_COLUMNS] != UNLABELED_MARKER).all(axis=1)
@@ -67,7 +57,7 @@ def make_submission(
     output_path: Path | None = None,
     model_name: str = "model",
 ) -> Path:
-    """Write a submission CSV for a fitted estimator."""
+    """Write a submission CSV of probabilities for a fitted estimator."""
 
     x_test = test_data[text_column].fillna("").astype(str)
     scores = predict_scores(estimator, x_test)
