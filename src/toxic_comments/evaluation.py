@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import time
+from dataclasses import dataclass
+from typing import Callable
+
 import numpy as np
 import pandas as pd
+from sklearn.base import clone
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -126,3 +131,69 @@ def evaluate_per_label(
         )
 
     return pd.DataFrame(rows)
+
+
+@dataclass(frozen=True)
+class FoldResult:
+    fold: int
+    model_name: str
+    subset_accuracy: float
+    hamming_loss: float
+    micro_precision: float
+    micro_recall: float
+    micro_f1: float
+    macro_f1: float
+    micro_roc_auc: float | None
+    macro_roc_auc: float | None
+
+
+def cross_validate_model(
+    estimator, data: pd.DataFrame, model_name: str, n_splits: int = 5,
+    random_state: int = 42, text_column: str = "comment_text",
+    splits: list[tuple[np.ndarray, np.ndarray]] | None = None,
+    on_fold_complete: Callable[[FoldResult, object], None] | None = None,
+) -> pd.DataFrame:
+    """Fit and evaluate cloned estimators fold by fold."""
+    if splits is None:
+        from toxic_comments.splits import make_fold_splits
+        splits = make_fold_splits(data, n_splits=n_splits, random_state=random_state,
+                                  text_column=text_column, strategy="stratified")
+    x = data[text_column]
+    y = data[LABEL_COLUMNS].to_numpy()
+    results = []
+    for fold_index, (train_index, test_index) in enumerate(splits, start=1):
+        started = time.perf_counter()
+        fold_estimator = clone(estimator)
+        fold_estimator.fit(x.iloc[train_index], y[train_index])
+        x_test = x.iloc[test_index]
+        y_pred = fold_estimator.predict(x_test)
+        y_score = predict_scores(fold_estimator, x_test)
+        metrics = evaluate_predictions(y[test_index], y_pred, y_score)
+        result = FoldResult(
+            fold=fold_index, model_name=model_name,
+            subset_accuracy=float(metrics["subset_accuracy"]),
+            hamming_loss=float(metrics["hamming_loss"]),
+            micro_precision=float(metrics["micro_precision"]),
+            micro_recall=float(metrics["micro_recall"]),
+            micro_f1=float(metrics["micro_f1"]),
+            macro_f1=float(metrics["macro_f1"]),
+            micro_roc_auc=_optional_float(metrics["micro_roc_auc"]),
+            macro_roc_auc=_optional_float(metrics["macro_roc_auc"]),
+        )
+        print(f"[{model_name}] fold {fold_index}/{len(splits)} done in {time.perf_counter()-started:.1f}s — macro_f1={result.macro_f1:.4f}, micro_f1={result.micro_f1:.4f}")
+        if on_fold_complete is not None:
+            on_fold_complete(result, fold_estimator)
+        results.append(result)
+    return pd.DataFrame([result.__dict__ for result in results])
+
+
+def summarize_results(results: pd.DataFrame) -> pd.DataFrame:
+    """Aggregate fold metrics by model."""
+    columns = ["subset_accuracy", "hamming_loss", "micro_precision", "micro_recall",
+               "micro_f1", "macro_f1", "micro_roc_auc", "macro_roc_auc"]
+    columns = [column for column in columns if column in results.columns]
+    return results.groupby("model_name")[columns].agg(["mean", "std"]).round(4)
+
+
+def _optional_float(value: float | None) -> float | None:
+    return None if value is None else float(value)

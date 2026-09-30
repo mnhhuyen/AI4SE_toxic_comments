@@ -8,7 +8,7 @@ import pandas as pd
 
 from toxic_comments.config import HEAVY_TEXT_COLUMN, MODELS_DIR
 from toxic_comments.evaluation import cross_validate_model, summarize_results
-from toxic_comments.folds import make_kfold_splits
+from toxic_comments.splits import make_fold_splits
 from toxic_comments.cleaning import process_cleaning
 from toxic_comments.repositories import DatasetRepository, validate_training_data
 from toxic_comments.models.registry import build_models
@@ -39,6 +39,7 @@ def run_experiment(
     include_transformer_models: bool = False,
     device: str | None = None,
     save_transformer_models: bool = True,
+    model_names: tuple[str, ...] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Run baseline and ML classifier evaluation with a repository abstraction.
 
@@ -67,7 +68,21 @@ def run_experiment(
         include_transformer_models=include_transformer_models,
         device=device,
     )
-    splits = make_kfold_splits(data, n_splits=n_splits, text_column=HEAVY_TEXT_COLUMN)
+    # Keep this experiment runner's historical default small and reproducible;
+    # the full classical/embedding registry remains available to train.py.
+    selected_names = model_names or ("dummy_most_frequent", "tfidf_logistic_regression")
+    if include_transformer_models:
+        selected_names = tuple(selected_names) + ("roberta_label_dependency",)
+    missing = [name for name in selected_names if name not in models]
+    if missing:
+        raise ValueError(f"Unknown experiment model(s): {', '.join(missing)}")
+    models = {name: models[name] for name in dict.fromkeys(selected_names)}
+    splits = make_fold_splits(
+        data,
+        n_splits=n_splits,
+        text_column=HEAVY_TEXT_COLUMN,
+        strategy="stratified",
+    )
 
     fold_results_path = output_dir / "cross_validation_results.csv"
     summary_path = output_dir / "summary_results.csv"

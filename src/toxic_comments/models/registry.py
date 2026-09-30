@@ -20,54 +20,31 @@ from toxic_comments.models.linear import (
 from toxic_comments.models.nbsvm import build_nbsvm
 from toxic_comments.models.tfidf_logreg import build_tfidf_logistic_regression
 
-
 def build_models(
     max_features: int = 50_000,
     embedding_dir: Path = EMBEDDINGS_DIR,
     max_embedding_vectors: int | None = None,
     embedding_pooling: str = "mean",
+    include_transformer_models: bool = False,
+    device: str | None = None,
 ):
-    return {
+    models = {
         "dummy_most_frequent": build_dummy_baseline(),
-        "tfidf_logistic_regression": build_tfidf_logistic_regression(
-            max_features=max_features
-        ),
-        "tfidf_lightgbm": build_tfidf_lightgbm_classifier(
-            max_features=max_features
-        ),
-        "word_char_logistic_regression": build_word_char_logistic_regression(
-            max_features=max_features
-        ),
-        "raw_text_logistic_regression": build_raw_text_logistic_regression(
-            max_features=max_features
-        ),
+        "tfidf_logistic_regression": build_tfidf_logistic_regression(max_features=max_features),
+        "tfidf_lightgbm": build_tfidf_lightgbm_classifier(max_features=max_features),
+        "word_char_logistic_regression": build_word_char_logistic_regression(max_features=max_features),
+        "raw_text_logistic_regression": build_raw_text_logistic_regression(max_features=max_features),
         "nbsvm": build_nbsvm(max_features=max_features),
         "tfidf_linear_svc": build_tfidf_linear_svc(max_features=max_features),
         "tfidf_sgd_logistic": build_tfidf_sgd_logistic(max_features=max_features),
         "tfidf_complement_nb": build_tfidf_complement_nb(max_features=max_features),
-        "fasttext_logistic_regression": build_fasttext_logistic_regression(
-            embedding_dir=embedding_dir,
-            max_vectors=max_embedding_vectors,
-            pooling=embedding_pooling,
-        ),
-        "glove_twitter_logistic_regression": build_glove_twitter_logistic_regression(
-            embedding_dir=embedding_dir,
-            max_vectors=max_embedding_vectors,
-            pooling=embedding_pooling,
-        ),
-        "bpemb_logistic_regression": build_bpemb_logistic_regression(
-            embedding_dir=embedding_dir,
-            max_vectors=max_embedding_vectors,
-            pooling=embedding_pooling,
-        ),
-        "word2vec_logistic_regression": build_word2vec_logistic_regression(
-            embedding_dir=embedding_dir,
-            max_vectors=max_embedding_vectors,
-            pooling=embedding_pooling,
-        ),
-        "lexvec_logistic_regression": build_lexvec_logistic_regression(
-            embedding_dir=embedding_dir,
-            max_vectors=max_embedding_vectors,
-            pooling=embedding_pooling,
-        ),
+        "fasttext_logistic_regression": build_fasttext_logistic_regression(embedding_dir=embedding_dir, max_vectors=max_embedding_vectors, pooling=embedding_pooling),
+        "glove_twitter_logistic_regression": build_glove_twitter_logistic_regression(embedding_dir=embedding_dir, max_vectors=max_embedding_vectors, pooling=embedding_pooling),
+        "bpemb_logistic_regression": build_bpemb_logistic_regression(embedding_dir=embedding_dir, max_vectors=max_embedding_vectors, pooling=embedding_pooling),
+        "word2vec_logistic_regression": build_word2vec_logistic_regression(embedding_dir=embedding_dir, max_vectors=max_embedding_vectors, pooling=embedding_pooling),
+        "lexvec_logistic_regression": build_lexvec_logistic_regression(embedding_dir=embedding_dir, max_vectors=max_embedding_vectors, pooling=embedding_pooling),
     }
+    if include_transformer_models:
+        from toxic_comments.models.roberta_label_dependency import build_roberta_label_dependency
+        models["roberta_label_dependency"] = build_roberta_label_dependency(device=device)
+    return models
