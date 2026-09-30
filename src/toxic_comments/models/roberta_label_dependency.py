@@ -1,23 +1,29 @@
 """Method 3 — RoBERTa + explicit label-dependency graph layer + BCE.
 
-Research role (see the 5-stage research design)
--------------------------------------------------
+Research role
+--------------
 Representation (RoBERTa encoder) and loss (plain BCE) are held IDENTICAL to
-Method 1. The only change relative to Method 1 is one new mechanism: a small
+a representation-only baseline fine-tune. The only new mechanism is a small
 graph message-passing layer over the six toxicity labels, using the
-*empirical label co-occurrence* from the training fold as a fixed adjacency
-— e.g. ``severe_toxic`` almost always co-occurring with ``toxic``. This
-isolates the contribution of explicit label-dependency modeling from
-representation changes (Method 1) and imbalance-handling changes (Method 2),
-so that Method 4's combined model can later be attributed correctly in the
-ablations.
+*empirical label co-occurrence* from the training fold as a fixed
+adjacency — e.g. ``severe_toxic`` almost always co-occurring with
+``toxic``. This isolates the contribution of explicit label-dependency
+modeling from representation and imbalance-handling changes, so it can be
+attributed correctly in ablations against the project's other methods.
 
-This is intentionally NOT the same mechanism as Method 4's label-attention
-head (which attends over *tokens* to build a per-label representation).
-Method 3 instead lets each label's *own* representation be refined by its
-*correlated labels'* representations — a GraphSAGE-style aggregation step
-over a 6-node label graph, using the co-occurrence matrix as a fixed,
-data-driven adjacency instead of a learned one.
+The message-passing step follows a GraphSAGE-style
+(Hamilton et al., 2017) self/neighbor aggregation pattern, applied to a
+6-node label graph rather than a token or data-instance graph.
+
+Import pattern
+--------------
+Like the project's other optional-dependency models, importing this module
+without ``torch``/``transformers`` installed raises ``ImportError``. Unlike
+``models/dpcnn.py`` (which defers its heavy import to inside the builder
+function), the try/except here has to live at the *call site* in
+``models/registry.py`` instead, because this module defines
+``torch.nn.Module`` subclasses that need ``torch`` to exist at class
+definition time, not just at build time.
 """
 
 from __future__ import annotations
@@ -49,7 +55,7 @@ def compute_cooccurrence_adjacency(y: np.ndarray) -> torch.Tensor:
 
 
 class LabelDependencyGraphLayer(nn.Module):
-    """One message-passing step over the six toxicity labels.
+    """One GraphSAGE-style message-passing step over the six toxicity labels.
 
     Each label starts from its own hidden vector (a per-label linear
     projection of the pooled RoBERTa representation). It is then updated
@@ -103,8 +109,9 @@ class RobertaLabelDependencyClassifier(RobertaMultiLabelBase):
 
     All constructor parameters are re-declared explicitly (rather than via
     ``**kwargs``) because scikit-learn's ``get_params``/``clone`` machinery
-    introspects each estimator's own ``__init__`` signature — a subclass
-    that swallows parent params into ``**kwargs`` breaks that contract.
+    introspects each estimator's own ``__init__`` signature — this is also
+    what ``ThresholdedClassifier`` (thresholds.py) relies on to clone this
+    model internally when tuning per-label thresholds.
     """
 
     def __init__(
@@ -140,7 +147,7 @@ class RobertaLabelDependencyClassifier(RobertaMultiLabelBase):
             adjacency=adjacency,
         )
     # _compute_loss is inherited unchanged from the base class (plain BCE) —
-    # this is deliberate: Method 3 isolates the dependency-layer variable only.
+    # this is deliberate: the method isolates the dependency-layer variable only.
 
 
 def build_roberta_label_dependency(
@@ -154,11 +161,7 @@ def build_roberta_label_dependency(
 ) -> RobertaLabelDependencyClassifier:
     """Factory matching the project's existing ``build_*`` model convention.
 
-    ``device`` defaults to ``None``, which auto-detects GPU vs CPU inside
-    ``fit`` (see ``_roberta_base.RobertaMultiLabelBase.fit``). Pass
-    ``device="cuda"`` explicitly if you want fit() to raise immediately when
-    no GPU is available, instead of silently falling back to a very slow
-    CPU run.
+    ``device`` defaults to ``None`` (auto-detect GPU vs CPU inside ``fit``).
     """
 
     return RobertaLabelDependencyClassifier(

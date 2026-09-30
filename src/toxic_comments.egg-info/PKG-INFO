@@ -1,0 +1,25 @@
+Metadata-Version: 2.4
+Name: toxic-comments
+Version: 0.1.0
+Summary: Multi-label toxic comment classification project
+Requires-Python: >=3.10
+Requires-Dist: pandas>=2.0
+Requires-Dist: numpy>=1.24
+Requires-Dist: scipy>=1.10
+Requires-Dist: scikit-learn>=1.3
+Requires-Dist: joblib>=1.3
+Requires-Dist: matplotlib>=3.7
+Requires-Dist: seaborn>=0.13
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4; extra == "dev"
+Requires-Dist: jupyterlab>=4.0; extra == "dev"
+Provides-Extra: advanced
+Requires-Dist: lightgbm>=4.0; extra == "advanced"
+Requires-Dist: tensorflow>=2.15; extra == "advanced"
+Provides-Extra: embeddings
+Requires-Dist: bpemb>=0.3.5; extra == "embeddings"
+Requires-Dist: gensim>=4.3; extra == "embeddings"
+Provides-Extra: transformers
+Requires-Dist: torch>=2.1; extra == "transformers"
+Requires-Dist: transformers>=4.38; extra == "transformers"
+Requires-Dist: tqdm>=4.66; extra == "transformers"

@@ -1,38 +1,40 @@
 """Shared base class for RoBERTa-based multi-label classifiers.
 
-This module gives Method 1 (RoBERTa+BCE), Method 2 (RoBERTa+ASL), and
-Method 3 (RoBERTa + label-dependency layer, this integration) one
-tokenization/training/inference loop to share, so each variant only needs to
-override the model architecture (``_build_model``) and, if needed, the loss
-function (``_compute_loss``). Everything else — including the
-``get_params``/``set_params``/``clone`` contract that
-``evaluation.cross_validate_model`` relies on via ``sklearn.base.clone`` — is
-implemented once here.
+This module gives every RoBERTa-based method (currently just the
+label-dependency model in ``roberta_label_dependency.py``, but written so a
+future BCE/ASL variant can reuse it) one tokenization/training/inference
+loop, so each variant only needs to override the model architecture
+(``_build_model``) and, if needed, the loss function (``_compute_loss``).
+
+Unlike the project's other optional-dependency models (e.g.
+``models/dpcnn.py``), this module imports ``torch``/``transformers`` at
+module level rather than inside a builder function, because it defines
+``torch.nn.Module`` subclasses that need those names to exist at class
+definition time. Callers that need to work on machines without torch
+installed (mirroring the project's ``MissingDependencyEstimator`` pattern)
+should defer *importing this module* until inside a try/except — see
+``models/registry.py``, which does exactly that for
+``roberta_label_dependency``.
 
 Design notes
 ------------
 - Every constructor parameter is stored verbatim as an attribute with the
   same name (no mutation, no derived state) so ``sklearn.base.clone`` can
-  rebuild an untrained copy of the estimator from ``get_params()`` alone.
-  Anything computed from data (tokenizer, model weights, label statistics)
-  is only ever set inside ``fit`` and named with a trailing underscore
-  (``self.model_``), which is the scikit-learn convention for "fitted"
-  attributes that ``clone`` must NOT copy.
-- Fine-tuning a transformer inside a 5-fold CV loop is expensive. See
-  ``models/registry.py`` and ``cli.py`` for the ``--include-transformers``
-  opt-in flag that keeps the existing fast baseline-only runs unaffected.
-- ``cross_validate_model`` clones + fits + discards one model per fold — by
-  design, since the point of that loop is comparing methods, not producing
-  a deployable artifact. Use ``save``/``load`` below (see
-  ``notebooks/train_and_save_roberta_label_dependency.ipynb``) to train once
-  on a train/test split and persist that model to disk instead.
+  rebuild an untrained copy of the estimator from ``get_params()`` alone —
+  this is what ``ThresholdedClassifier`` (thresholds.py) and any k-fold
+  loop rely on.
+- Persistence goes through this project's existing ``joblib.dump``/
+  ``joblib.load`` (see ``train.save_model``), not a custom save/load. The
+  ``__getstate__``/``__setstate__`` overrides below exist only to make that
+  generic pickling GPU-safe: a naive pickle of a CUDA-resident
+  ``torch.nn.Module`` fails to load on a CPU-only machine, so the model's
+  weights are moved to CPU before pickling and the architecture is rebuilt
+  (then weights reloaded) on unpickling.
 """
 
 from __future__ import annotations
 
-import json
 import time
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -64,11 +66,7 @@ class _TextLabelDataset(Dataset):
 
 
 class RobertaMultiLabelBase(BaseEstimator, ClassifierMixin):
-    """Shared fit/predict loop for RoBERTa-based multi-label classifiers.
-
-    Subclasses must implement ``_build_model`` and may override
-    ``_compute_loss``. See ``roberta_label_dependency.py`` for Method 3.
-    """
+    """Shared fit/predict loop for RoBERTa-based multi-label classifiers."""
 
     def __init__(
         self,
@@ -95,15 +93,17 @@ class RobertaMultiLabelBase(BaseEstimator, ClassifierMixin):
         """Build and return the torch module for this variant.
 
         Receives the *training fold's* labels so subclasses that need label
-        statistics (e.g. Method 3's co-occurrence adjacency) can compute
-        them here — this keeps the statistic fold-local and avoids leaking
-        information from the held-out fold.
+        statistics (e.g. co-occurrence) can compute them here — this keeps
+        the statistic fold-local and avoids leaking information from the
+        held-out fold. When rebuilding from a pickle (see __setstate__), a
+        zero-filled placeholder is passed instead; the real values are part
+        of the state_dict loaded right after and overwrite the placeholder.
         """
 
         raise NotImplementedError
 
     def _compute_loss(self, logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        """Default loss is plain BCE. Method 2 (ASL) overrides this."""
+        """Default loss is plain BCE."""
 
         return nn.functional.binary_cross_entropy_with_logits(logits, targets)
 
@@ -115,9 +115,6 @@ class RobertaMultiLabelBase(BaseEstimator, ClassifierMixin):
         self.tokenizer_ = AutoTokenizer.from_pretrained(self.pretrained_model_name)
         self.model_ = self._build_model(y).to(self.device_)
 
-        # Tokenizing the whole fold in one call has no built-in progress
-        # output and can take a while (CPU-bound) — print around it so a
-        # long pause here doesn't look like a hang.
         print(f"Đang tokenize {len(X):,} dòng...", flush=True)
         tokenize_start = time.perf_counter()
         loader = self._make_loader(X, y, shuffle=True)
@@ -127,11 +124,7 @@ class RobertaMultiLabelBase(BaseEstimator, ClassifierMixin):
 
         self.model_.train()
         for epoch in range(self.num_epochs):
-            progress = tqdm(
-                loader,
-                desc=f"Epoch {epoch + 1}/{self.num_epochs}",
-                leave=False,
-            )
+            progress = tqdm(loader, desc=f"Epoch {epoch + 1}/{self.num_epochs}", leave=False)
             for batch in progress:
                 targets = batch.pop("labels").to(self.device_)
                 batch = {key: value.to(self.device_) for key, value in batch.items()}
@@ -158,48 +151,31 @@ class RobertaMultiLabelBase(BaseEstimator, ClassifierMixin):
     def predict(self, X: pd.Series, threshold: float = 0.5) -> np.ndarray:
         return (self.predict_proba(X) >= threshold).astype(int)
 
-    # ---- persistence -------------------------------------------------------
-    def save(self, path: str | Path) -> None:
-        """Persist the fitted model, tokenizer, and reconstruction params.
+    def __sklearn_is_fitted__(self) -> bool:
+        return hasattr(self, "model_")
 
-        Works for any subclass without extra code: ``self.model_.state_dict()``
-        already includes registered buffers (e.g. Method 3's co-occurrence
-        adjacency), so subclass-specific state is captured automatically.
-        """
+    # ---- GPU-safe pickling (joblib.dump / joblib.load via train.py) ------
+    def __getstate__(self) -> dict:
+        state = self.__dict__.copy()
+        model = state.pop("model_", None)
+        if model is not None:
+            state["_model_state_dict"] = {
+                key: value.cpu() for key, value in model.state_dict().items()
+            }
+        return state
 
-        if not hasattr(self, "model_"):
-            raise RuntimeError("Cannot save an unfitted estimator — call fit() first.")
+    def __setstate__(self, state: dict) -> None:
+        model_state_dict = state.pop("_model_state_dict", None)
+        self.__dict__.update(state)
+        if model_state_dict is not None:
+            self.device_ = self.device or ("cuda" if torch.cuda.is_available() else "cpu")
+            placeholder_y = np.zeros((1, self.num_labels))
+            self.model_ = self._build_model(placeholder_y)
+            self.model_.load_state_dict(model_state_dict)
+            self.model_.to(self.device_)
+            self.model_.eval()
 
-        path = Path(path)
-        path.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model_.state_dict(), path / "model_state_dict.pt")
-        self.tokenizer_.save_pretrained(path)
-        (path / "params.json").write_text(json.dumps(self.get_params(), indent=2))
-
-    @classmethod
-    def load(cls, path: str | Path, device: str | None = None) -> "RobertaMultiLabelBase":
-        """Reconstruct a fitted estimator saved with ``save``. Ready to
-        ``predict``/``predict_proba`` immediately — no need to call ``fit``.
-        """
-
-        path = Path(path)
-        params = json.loads((path / "params.json").read_text())
-        estimator = cls(**params)
-        estimator.device_ = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        estimator.tokenizer_ = AutoTokenizer.from_pretrained(path)
-
-        # _build_model may need label statistics (e.g. Method 3's adjacency).
-        # A zero-filled placeholder is fine here: the real values are part of
-        # the state_dict loaded right below, which overwrites this anyway.
-        placeholder_y = np.zeros((1, estimator.num_labels))
-        estimator.model_ = estimator._build_model(placeholder_y).to(estimator.device_)
-
-        state_dict = torch.load(path / "model_state_dict.pt", map_location=estimator.device_)
-        estimator.model_.load_state_dict(state_dict)
-        estimator.model_.eval()
-        return estimator
-
-    # ---- helpers ----------------------------------------------------------
+    # ---- helpers ------------------------------------------------------------
     def _make_loader(self, X: pd.Series, y: np.ndarray | None, shuffle: bool) -> DataLoader:
         encodings = self.tokenizer_(
             list(X),

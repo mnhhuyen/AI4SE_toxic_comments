@@ -1,15 +1,14 @@
-"""Run inference with a saved toxic-comment classifier.
+"""Run inference with a model saved via train.save_model() (joblib).
 
-Loads a model saved via ``RobertaMultiLabelBase.save()`` — either the
-automatic last-fold save from ``python -m toxic_comments --include-transformers``
-(see ``experiment.run_experiment``), or a model saved from
-``notebooks/train_and_save_roberta_label_dependency.ipynb`` — and predicts on
-new comment text.
+Works with any model saved by train.py's train_holdout()/train_from_folds()
+— not just roberta_label_dependency — since joblib.load() reconstructs
+whatever estimator was pickled and every registered model implements the
+same predict_proba()/predict() contract.
 
 Usage
 -----
-    python -m toxic_comments.predict --text "you are so stupid" --text "have a nice day"
-    python -m toxic_comments.predict --model models/roberta_label_dependency --text "..."
+    python -m toxic_comments.predict --text "you are so stupid"
+    python -m toxic_comments.predict --model models/fold_2/roberta_label_dependency.joblib --text "..."
 """
 
 from __future__ import annotations
@@ -17,11 +16,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import joblib
 import pandas as pd
 
 from toxic_comments.cleaning import clean_heavy, clean_light
 from toxic_comments.config import LABEL_COLUMNS, MODELS_DIR
-from toxic_comments.models.roberta_label_dependency import RobertaLabelDependencyClassifier
+from toxic_comments.evaluation import predict_scores
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,8 +29,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--model",
         type=Path,
-        default=MODELS_DIR / "roberta_label_dependency",
-        help="Directory a model was saved to via .save() (default: models/roberta_label_dependency).",
+        default=MODELS_DIR / "fold_1" / "roberta_label_dependency.joblib",
+        help="Path to a .joblib model saved by train.py (default: fold_1's roberta_label_dependency).",
     )
     parser.add_argument(
         "--text",
@@ -43,9 +43,10 @@ def parse_args() -> argparse.Namespace:
         "--threshold",
         type=float,
         default=0.5,
-        help="Decision threshold applied to every label (default 0.5 — see the "
-        "research design's note on per-label adaptive thresholds for why this "
-        "is a simplification).",
+        help="Decision threshold applied to every label (default 0.5). If the "
+        "model was trained with --tune-thresholds, its own predict() already "
+        "applies per-label thresholds and this value is ignored for *_pred "
+        "columns derived from predict_proba below.",
     )
     parser.add_argument(
         "--raw",
@@ -56,17 +57,27 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def predict(texts: list[str], model_dir: Path, threshold: float = 0.5, already_clean: bool = False) -> pd.DataFrame:
+def predict(
+    texts: list[str],
+    model_path: Path,
+    threshold: float = 0.5,
+    already_clean: bool = False,
+) -> pd.DataFrame:
     """Load a saved model and return a per-label probability/prediction table."""
 
-    model = RobertaLabelDependencyClassifier.load(model_dir)
+    model = joblib.load(model_path)
 
     if already_clean:
         cleaned = pd.Series(texts)
     else:
         cleaned = pd.Series(texts).apply(clean_light).apply(clean_heavy)
 
-    scores = model.predict_proba(cleaned)
+    scores = predict_scores(model, cleaned)
+    if scores is None:
+        raise ValueError(
+            f"Model at {model_path} produces no rankable scores (no predict_proba "
+            "or decision_function)."
+        )
     preds = (scores >= threshold).astype(int)
 
     result = pd.DataFrame({"comment_text": texts})
@@ -78,11 +89,11 @@ def predict(texts: list[str], model_dir: Path, threshold: float = 0.5, already_c
 
 def main() -> None:
     args = parse_args()
-    if not (args.model / "params.json").exists():
+    if not args.model.exists():
         raise FileNotFoundError(
-            f"Không thấy model đã lưu tại {args.model} (thiếu params.json). "
-            "Model chỉ được lưu khi chạy `--include-transformers` (mặc định "
-            "auto-save fold cuối) hoặc qua notebook train_and_save_*.ipynb."
+            f"Không thấy model tại {args.model}. Model chỉ được tạo sau khi chạy "
+            "train_from_folds()/train_holdout() — ví dụ qua notebook "
+            "train_roberta_label_dependency_folds.ipynb."
         )
 
     result = predict(args.text, args.model, threshold=args.threshold, already_clean=args.raw)
