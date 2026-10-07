@@ -1,19 +1,35 @@
-"""Bi-GRU model factory."""
+"""Bi-GRU + max/attention pooling model factory.
+
+See ``_rnn_base.py`` for the shared architecture.
+"""
 
 from __future__ import annotations
 
-from toxic_comments.models._optional import missing_dependency
+from pathlib import Path
+
+from toxic_comments.config import EMBEDDINGS_DIR
+from toxic_comments.embeddings.fasttext import FASTTEXT_VECTOR_FILE
+from toxic_comments.models._optional import MissingDependencyEstimator
 
 
-def build_bigru_max_attention_classifier(*args, **kwargs):
-    """Build Bi-GRU with max + attention pooling."""
+def build_bigru_max_attention_classifier(
+    embedding_dir: Path = EMBEDDINGS_DIR,
+    embedding_file: str | None = FASTTEXT_VECTOR_FILE,
+    device: str | None = None,
+    **kwargs,
+):
+    """Build a Bi-GRU classifier initialised with pretrained vectors.
+
+    Pass ``embedding_file=None`` to train the embedding layer from scratch.
+    Extra keyword arguments go to ``RecurrentMultiLabelClassifier``.
+    """
 
     try:
-        import tensorflow as tf  # noqa: F401
-    except ImportError as exc:
-        raise missing_dependency("tensorflow", "bigru_max_attention_classifier") from exc
+        from toxic_comments.models._rnn_base import RecurrentMultiLabelClassifier
+    except ImportError:
+        return MissingDependencyEstimator("torch", "bigru_max_attention")
 
-    raise NotImplementedError(
-        "Bi-GRU max+attention needs a sequence/tokenizer training pipeline before "
-        "it can be used with train_model()."
+    embedding_path = None if embedding_file is None else embedding_dir / embedding_file
+    return RecurrentMultiLabelClassifier(
+        cell_type="gru", embedding_path=embedding_path, device=device, **kwargs
     )
