@@ -29,3 +29,5 @@ __pycache__/
 !/data/embeddings/**/README.md
 !/models/**/README.md
 !/results/**/README.md
+
+.bigru_backup/

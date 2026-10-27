@@ -33,7 +33,6 @@ def test_registry_includes_roberta_label_dependency():
     "builder",
     [
         build_rnn_classifier,
-        build_bigru_max_attention_classifier,
         build_bilstm_max_attention_classifier,
         build_dpcnn_classifier,
     ],
@@ -46,3 +45,30 @@ def test_neural_model_scaffolds_are_importable(builder):
     except NotImplementedError as exc:
         assert "pipeline" in str(exc)
 
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["bigru_max_attention", "bigru_max_attention_glove", "bigru_max_attention_random"],
+)
+def test_registry_includes_bigru_models(name):
+    """Tolerates torch being absent, like roberta_label_dependency."""
+
+    models = build_models(max_features=20)
+    assert name in models
+
+    estimator = models[name]
+    if isinstance(estimator, MissingDependencyEstimator):
+        with pytest.raises(ImportError, match="torch"):
+            estimator.fit(["a"], [[0] * len(LABEL_COLUMNS)])
+    else:
+        assert hasattr(estimator, "predict_proba")
+
+
+def test_bigru_builder_returns_estimator_or_clear_import_error():
+    try:
+        estimator = build_bigru_max_attention_classifier()
+    except ImportError as exc:
+        assert "torch" in str(exc)
+    else:
+        assert hasattr(estimator, "fit")
