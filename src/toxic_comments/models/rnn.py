@@ -1,24 +1,37 @@
-"""Plain RNN model factory.
+"""Bi-RNN (vanilla tanh cell) + max/attention pooling model factory.
 
-This file is intentionally separate from the sklearn models because neural
-models need a tokenization/sequence pipeline before they can replace the
-current TF-IDF or embedding-average baselines.
+See ``_rnn_base.py`` for the shared architecture.
+The vanilla cell has no gates, so it suffers most from vanishing gradients
+on long comments; it is the baseline that motivates LSTM/GRU in the report.
 """
 
 from __future__ import annotations
 
-from toxic_comments.models._optional import missing_dependency
+from pathlib import Path
+
+from toxic_comments.config import EMBEDDINGS_DIR
+from toxic_comments.embeddings.fasttext import FASTTEXT_VECTOR_FILE
+from toxic_comments.models._optional import MissingDependencyEstimator
 
 
-def build_rnn_classifier(*args, **kwargs):
-    """Build a plain RNN classifier once the TensorFlow pipeline is added."""
+def build_rnn_classifier(
+    embedding_dir: Path = EMBEDDINGS_DIR,
+    embedding_file: str | None = FASTTEXT_VECTOR_FILE,
+    device: str | None = None,
+    **kwargs,
+):
+    """Build a Bi-RNN (vanilla tanh cell) classifier initialised with pretrained vectors.
+
+    Pass ``embedding_file=None`` to train the embedding layer from scratch.
+    Extra keyword arguments go to ``RecurrentMultiLabelClassifier``.
+    """
 
     try:
-        import tensorflow as tf  # noqa: F401
-    except ImportError as exc:
-        raise missing_dependency("tensorflow", "rnn_classifier") from exc
+        from toxic_comments.models._rnn_base import RecurrentMultiLabelClassifier
+    except ImportError:
+        return MissingDependencyEstimator("torch", "birnn_max_attention")
 
-    raise NotImplementedError(
-        "RNN needs a sequence/tokenizer training pipeline before it can be used "
-        "with train_model()."
+    embedding_path = None if embedding_file is None else embedding_dir / embedding_file
+    return RecurrentMultiLabelClassifier(
+        cell_type="rnn", embedding_path=embedding_path, device=device, **kwargs
     )

@@ -5,6 +5,8 @@ from toxic_comments.embeddings.fasttext import FASTTEXT_VECTOR_FILE
 from toxic_comments.embeddings.glove import GLOVE_TWITTER_VECTOR_FILE
 from toxic_comments.models._optional import MissingDependencyEstimator
 from toxic_comments.models.baseline import build_dummy_baseline
+from toxic_comments.models.bigru_shared import build_bigru_shared_max_attention_classifier
+from toxic_comments.models.bilstm import build_bilstm_max_attention_classifier
 from toxic_comments.models.embedding_logreg import (
     build_bpemb_logistic_regression,
     build_fasttext_logistic_regression,
@@ -21,6 +23,7 @@ from toxic_comments.models.linear import (
     build_word_char_logistic_regression,
 )
 from toxic_comments.models.nbsvm import build_nbsvm
+from toxic_comments.models.rnn import build_rnn_classifier
 from toxic_comments.models.tfidf_logreg import build_tfidf_logistic_regression
 
 
@@ -125,6 +128,13 @@ def build_models(
             embedding_dir=embedding_dir,
             max_vectors=max_embedding_vectors,
             pooling=embedding_pooling,
+        ),
+        "birnn_max_attention": build_rnn_classifier(embedding_dir=embedding_dir, device=device),
+        "bilstm_max_attention": build_bilstm_max_attention_classifier(
+            embedding_dir=embedding_dir, device=device
+        ),
+        "bigru_shared_max_attention": build_bigru_shared_max_attention_classifier(
+            embedding_dir=embedding_dir, device=device
         ),
         "roberta_label_dependency": _build_roberta_label_dependency(device=device),
         "bigru_max_attention": _build_bigru(

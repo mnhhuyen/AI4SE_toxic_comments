@@ -31,3 +31,6 @@ __pycache__/
 !/results/**/README.md
 
 .bigru_backup/
+
+# local Claude Code guidance, not shared
+CLAUDE.md
