@@ -29,3 +29,8 @@ __pycache__/
 !/data/embeddings/**/README.md
 !/models/**/README.md
 !/results/**/README.md
+
+.bigru_backup/
+
+# local Claude Code guidance, not shared
+CLAUDE.md

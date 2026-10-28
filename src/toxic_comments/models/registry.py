@@ -1,9 +1,11 @@
 from pathlib import Path
 
 from toxic_comments.config import EMBEDDINGS_DIR
+from toxic_comments.embeddings.fasttext import FASTTEXT_VECTOR_FILE
+from toxic_comments.embeddings.glove import GLOVE_TWITTER_VECTOR_FILE
 from toxic_comments.models._optional import MissingDependencyEstimator
 from toxic_comments.models.baseline import build_dummy_baseline
-from toxic_comments.models.bigru import build_bigru_max_attention_classifier
+from toxic_comments.models.bigru_shared import build_bigru_shared_max_attention_classifier
 from toxic_comments.models.bilstm import build_bilstm_max_attention_classifier
 from toxic_comments.models.embedding_logreg import (
     build_bpemb_logistic_regression,
@@ -38,6 +40,28 @@ def _build_roberta_label_dependency(device: str | None):
     except ImportError:
         return MissingDependencyEstimator("transformers", "roberta_label_dependency")
     return build_roberta_label_dependency(device=device)
+
+
+def _build_bigru(
+    embedding_path: Path | None,
+    max_embedding_vectors: int | None,
+    device: str | None,
+    model_name: str,
+):
+    """Deferred import like ``_build_roberta_label_dependency``: building the
+    estimator is cheap (embeddings load inside ``fit``), and machines without
+    torch get a ``MissingDependencyEstimator`` instead of an import error."""
+
+    try:
+        from toxic_comments.models.bigru import build_bigru_max_attention_classifier
+
+        return build_bigru_max_attention_classifier(
+            embedding_path=embedding_path,
+            max_embedding_vectors=max_embedding_vectors,
+            device=device,
+        )
+    except ImportError:
+        return MissingDependencyEstimator("torch", model_name)
 
 
 def build_models(
@@ -109,10 +133,28 @@ def build_models(
         "bilstm_max_attention": build_bilstm_max_attention_classifier(
             embedding_dir=embedding_dir, device=device
         ),
-        "bigru_max_attention": build_bigru_max_attention_classifier(
+        "bigru_shared_max_attention": build_bigru_shared_max_attention_classifier(
             embedding_dir=embedding_dir, device=device
         ),
         "roberta_label_dependency": _build_roberta_label_dependency(device=device),
+        "bigru_max_attention": _build_bigru(
+            embedding_path=embedding_dir / FASTTEXT_VECTOR_FILE,
+            max_embedding_vectors=max_embedding_vectors,
+            device=device,
+            model_name="bigru_max_attention",
+        ),
+        "bigru_max_attention_glove": _build_bigru(
+            embedding_path=embedding_dir / GLOVE_TWITTER_VECTOR_FILE,
+            max_embedding_vectors=max_embedding_vectors,
+            device=device,
+            model_name="bigru_max_attention_glove",
+        ),
+        "bigru_max_attention_random": _build_bigru(
+            embedding_path=None,
+            max_embedding_vectors=None,
+            device=device,
+            model_name="bigru_max_attention_random",
+        ),
     }
     return models
 
