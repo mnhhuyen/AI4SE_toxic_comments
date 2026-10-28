@@ -34,3 +34,6 @@ __pycache__/
 
 # local Claude Code guidance, not shared
 CLAUDE.md
+
+# macOS Finder metadata
+.DS_Store

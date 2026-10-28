@@ -47,6 +47,16 @@ UNK_ID = 1
 CELL_TYPES = {"rnn": nn.RNN, "lstm": nn.LSTM, "gru": nn.GRU}
 
 
+def _default_device() -> str:
+    """CUDA if present, else Apple-silicon GPU (MPS), else CPU."""
+
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 def load_vocab_embeddings(
     embedding_path: Path,
     vocab: dict[str, int],
@@ -217,7 +227,7 @@ class RecurrentMultiLabelClassifier(BaseEstimator, ClassifierMixin):
         y = np.asarray(y, dtype=np.float32)
         torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
-        self.device_ = self.device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.device_ = self.device or _default_device()
         self.num_labels_ = y.shape[1]
 
         token_lists = [tokenize(text) for text in pd.Series(X).fillna("").astype(str)]
@@ -322,7 +332,7 @@ class RecurrentMultiLabelClassifier(BaseEstimator, ClassifierMixin):
         model_state_dict = state.pop("_model_state_dict", None)
         self.__dict__.update(state)
         if model_state_dict is not None:
-            self.device_ = self.device or ("cuda" if torch.cuda.is_available() else "cpu")
+            self.device_ = self.device or _default_device()
             self.model_ = self._build_model(None)
             self.model_.load_state_dict(model_state_dict)
             self.model_.to(self.device_)
