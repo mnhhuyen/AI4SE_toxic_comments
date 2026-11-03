@@ -10,7 +10,7 @@ __pycache__/
 /data/k_fold/**
 /data/embeddings/**
 /models/**
-/results/**
+# /results/**
 
 !/data/processed/**/
 !/data/k_fold/**/

@@ -1,0 +1,4 @@
+model,micro_f1_mean,micro_f1_std,macro_f1_mean,macro_f1_std,micro_roc_auc_mean,micro_roc_auc_std,macro_roc_auc_mean,macro_roc_auc_std,train_minutes_5_folds
+Bi-GRU,0.7623,0.0062,0.5941,0.0207,0.9907,0.0004,0.9877,0.0007,44.8
+Bi-LSTM,0.7579,0.0069,0.5381,0.0244,0.9903,0.0004,0.9866,0.0006,45.7
+Bi-RNN,0.7422,0.0227,0.5182,0.0382,0.9896,0.0006,0.9851,0.0011,36.0

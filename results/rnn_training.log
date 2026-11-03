@@ -1,0 +1,85 @@
+
+===== birnn_max_attention =====
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[rnn] epoch 1/4 loss=0.0790 (105s)
+[rnn] epoch 2/4 loss=0.0508 (103s)
+[rnn] epoch 3/4 loss=0.0474 (104s)
+[rnn] epoch 4/4 loss=0.0460 (110s)
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[rnn] epoch 1/4 loss=0.0764 (106s)
+[rnn] epoch 2/4 loss=0.0502 (105s)
+[rnn] epoch 3/4 loss=0.0474 (105s)
+[rnn] epoch 4/4 loss=0.0460 (102s)
+Vocab 100,000 tokens — 61.7% found in wiki-news-300d-1M.vec
+[rnn] epoch 1/4 loss=0.0767 (101s)
+[rnn] epoch 2/4 loss=0.0500 (103s)
+[rnn] epoch 3/4 loss=0.0473 (101s)
+[rnn] epoch 4/4 loss=0.0459 (101s)
+Vocab 100,000 tokens — 61.9% found in wiki-news-300d-1M.vec
+[rnn] epoch 1/4 loss=0.0764 (101s)
+[rnn] epoch 2/4 loss=0.0503 (101s)
+[rnn] epoch 3/4 loss=0.0477 (100s)
+[rnn] epoch 4/4 loss=0.0460 (100s)
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[rnn] epoch 1/4 loss=0.0772 (99s)
+[rnn] epoch 2/4 loss=0.0502 (100s)
+[rnn] epoch 3/4 loss=0.0475 (101s)
+[rnn] epoch 4/4 loss=0.0461 (100s)
+birnn_max_attention: 36.0 min for 5 folds
+
+===== bilstm_max_attention =====
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[lstm] epoch 1/4 loss=0.0857 (138s)
+[lstm] epoch 2/4 loss=0.0489 (135s)
+[lstm] epoch 3/4 loss=0.0455 (131s)
+[lstm] epoch 4/4 loss=0.0439 (129s)
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[lstm] epoch 1/4 loss=0.0868 (130s)
+[lstm] epoch 2/4 loss=0.0489 (132s)
+[lstm] epoch 3/4 loss=0.0458 (131s)
+[lstm] epoch 4/4 loss=0.0438 (132s)
+Vocab 100,000 tokens — 61.7% found in wiki-news-300d-1M.vec
+[lstm] epoch 1/4 loss=0.0883 (125s)
+[lstm] epoch 2/4 loss=0.0491 (125s)
+[lstm] epoch 3/4 loss=0.0460 (128s)
+[lstm] epoch 4/4 loss=0.0441 (131s)
+Vocab 100,000 tokens — 61.9% found in wiki-news-300d-1M.vec
+[lstm] epoch 1/4 loss=0.0874 (129s)
+[lstm] epoch 2/4 loss=0.0494 (130s)
+[lstm] epoch 3/4 loss=0.0457 (130s)
+[lstm] epoch 4/4 loss=0.0438 (131s)
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[lstm] epoch 1/4 loss=0.0878 (133s)
+[lstm] epoch 2/4 loss=0.0492 (133s)
+[lstm] epoch 3/4 loss=0.0459 (132s)
+[lstm] epoch 4/4 loss=0.0442 (131s)
+bilstm_max_attention: 45.7 min for 5 folds
+
+===== bigru_shared_max_attention =====
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[gru] epoch 1/4 loss=0.0771 (127s)
+[gru] epoch 2/4 loss=0.0470 (124s)
+[gru] epoch 3/4 loss=0.0444 (124s)
+[gru] epoch 4/4 loss=0.0430 (126s)
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[gru] epoch 1/4 loss=0.0761 (125s)
+[gru] epoch 2/4 loss=0.0474 (131s)
+[gru] epoch 3/4 loss=0.0446 (131s)
+[gru] epoch 4/4 loss=0.0431 (127s)
+Vocab 100,000 tokens — 61.7% found in wiki-news-300d-1M.vec
+[gru] epoch 1/4 loss=0.0762 (127s)
+[gru] epoch 2/4 loss=0.0472 (125s)
+[gru] epoch 3/4 loss=0.0447 (124s)
+[gru] epoch 4/4 loss=0.0430 (132s)
+Vocab 100,000 tokens — 61.9% found in wiki-news-300d-1M.vec
+[gru] epoch 1/4 loss=0.0766 (128s)
+[gru] epoch 2/4 loss=0.0472 (127s)
+[gru] epoch 3/4 loss=0.0445 (129s)
+[gru] epoch 4/4 loss=0.0429 (130s)
+Vocab 100,000 tokens — 61.8% found in wiki-news-300d-1M.vec
+[gru] epoch 1/4 loss=0.0766 (127s)
+[gru] epoch 2/4 loss=0.0471 (133s)
+[gru] epoch 3/4 loss=0.0444 (133s)
+[gru] epoch 4/4 loss=0.0430 (132s)
+bigru_shared_max_attention: 44.8 min for 5 folds
+ALL DONE

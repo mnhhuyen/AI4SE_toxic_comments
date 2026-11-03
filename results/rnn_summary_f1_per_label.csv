@@ -1,0 +1,7 @@
+label,Bi-RNN,Bi-LSTM,Bi-GRU
+toxic,0.7868,0.8017,0.8
+obscene,0.8104,0.8246,0.8254
+insult,0.7127,0.7289,0.7395
+identity_hate,0.3703,0.4396,0.5104
+severe_toxic,0.3893,0.3569,0.404
+threat,0.0399,0.0772,0.2854
