@@ -7,6 +7,7 @@ from toxic_comments.models._optional import MissingDependencyEstimator
 from toxic_comments.models.baseline import build_dummy_baseline
 from toxic_comments.models.bigru_shared import build_bigru_shared_max_attention_classifier
 from toxic_comments.models.bilstm import build_bilstm_max_attention_classifier
+from toxic_comments.models.dpcnn import build_dpcnn_classifier
 from toxic_comments.models.embedding_logreg import (
     build_bpemb_logistic_regression,
     build_fasttext_logistic_regression,
@@ -136,6 +137,7 @@ def build_models(
         "bigru_shared_max_attention": build_bigru_shared_max_attention_classifier(
             embedding_dir=embedding_dir, device=device
         ),
+        "dpcnn": build_dpcnn_classifier(embedding_dir=embedding_dir, device=device),
         "roberta_label_dependency": _build_roberta_label_dependency(device=device),
         "bigru_max_attention": _build_bigru(
             embedding_path=embedding_dir / FASTTEXT_VECTOR_FILE,

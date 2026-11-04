@@ -222,8 +222,7 @@ class RecurrentMultiLabelClassifier(BaseEstimator, ClassifierMixin):
 
     # ---- scikit-learn estimator contract ---------------------------------
     def fit(self, X: pd.Series, y: np.ndarray) -> "RecurrentMultiLabelClassifier":
-        if self.cell_type not in CELL_TYPES:
-            raise ValueError(f"cell_type must be one of: {', '.join(CELL_TYPES)}")
+        self._check_params()
         y = np.asarray(y, dtype=np.float32)
         torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
@@ -277,7 +276,7 @@ class RecurrentMultiLabelClassifier(BaseEstimator, ClassifierMixin):
                 progress.set_postfix(loss=f"{loss.item():.4f}")
             self.history_.append(total_loss / total_rows)
             print(
-                f"[{self.cell_type}] epoch {epoch + 1}/{self.num_epochs} "
+                f"[{self._log_tag()}] epoch {epoch + 1}/{self.num_epochs} "
                 f"loss={self.history_[-1]:.4f} ({time.perf_counter() - started:.0f}s)",
                 flush=True,
             )
@@ -339,6 +338,13 @@ class RecurrentMultiLabelClassifier(BaseEstimator, ClassifierMixin):
             self.model_.eval()
 
     # ---- helpers ------------------------------------------------------------
+    def _check_params(self) -> None:
+        if self.cell_type not in CELL_TYPES:
+            raise ValueError(f"cell_type must be one of: {', '.join(CELL_TYPES)}")
+
+    def _log_tag(self) -> str:
+        return self.cell_type
+
     def _build_model(self, embedding_matrix: np.ndarray | None) -> nn.Module:
         return _RecurrentNet(
             cell_type=self.cell_type,
