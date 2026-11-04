@@ -1,0 +1,2 @@
+experiment_fingerprint,text_column,model_name,split,rows,subset_accuracy,hamming_loss,micro_precision,micro_recall,micro_f1,macro_f1,micro_roc_auc,macro_roc_auc
+a254930447626ecf308f71b9e4dcbd3aecdc3d23da9efbf02636d2bf9a51d4ad,comment_heavy,tfidf_logistic_regression,validation,15948,0.8787308753448708,0.02912590920491598,0.5684489950701554,0.8543744656597321,0.6826824547421154,0.5593785234935382,0.9821153788620182,0.9754073403233909

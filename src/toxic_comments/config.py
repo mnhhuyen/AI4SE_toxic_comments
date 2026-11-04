@@ -1,6 +1,6 @@
 """Shared project configuration."""
 
-from pathlib import Path
+from pathlib import Path 
 
 LABEL_COLUMNS = [
     "toxic",

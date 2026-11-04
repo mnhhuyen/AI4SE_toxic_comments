@@ -9,6 +9,8 @@ __pycache__/
 /data/processed/**
 /data/k_fold/**
 /data/embeddings/**
+/data/embeddings.zip
+
 /models/**
 # /results/**
 

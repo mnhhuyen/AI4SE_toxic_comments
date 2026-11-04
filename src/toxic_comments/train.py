@@ -287,7 +287,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--embedding-pooling",
-        choices=["mean", "max", "attention", "max_attention"],
+        choices=["mean", "max", "attention", "max_attention", "supervised_attention", "max_supervised_attention"],
         default="mean",
         help="Pooling strategy for pretrained embedding models.",
     )

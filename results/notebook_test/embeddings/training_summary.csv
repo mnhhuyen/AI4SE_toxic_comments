@@ -1,0 +1,6 @@
+model_name,pooling,text_column,train_rows,fit_seconds,model_path,max_embedding_vectors
+fasttext_logistic_regression,max_attention,comment_heavy,127580,262.9088204809959,/home/jkl0909/minhhuyen/toxic-comments/models/notebook_test/embeddings_max_attention/fasttext_logistic_regression.joblib,
+glove_twitter_logistic_regression,max_attention,comment_heavy,127580,280.8851516650029,/home/jkl0909/minhhuyen/toxic-comments/models/notebook_test/embeddings_max_attention/glove_twitter_logistic_regression.joblib,
+bpemb_logistic_regression,max_attention,comment_heavy,127580,621.5726695730045,/home/jkl0909/minhhuyen/toxic-comments/models/notebook_test/embeddings_max_attention/bpemb_logistic_regression.joblib,
+word2vec_logistic_regression,max_attention,comment_heavy,127580,334.84252102599567,/home/jkl0909/minhhuyen/toxic-comments/models/notebook_test/embeddings_max_attention/word2vec_logistic_regression.joblib,
+lexvec_logistic_regression,max_attention,comment_heavy,127580,263.17992019699886,/home/jkl0909/minhhuyen/toxic-comments/models/notebook_test/embeddings_max_attention/lexvec_logistic_regression.joblib,

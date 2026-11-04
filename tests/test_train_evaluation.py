@@ -91,6 +91,23 @@ def test_train_model_can_wrap_with_tuned_thresholds():
     assert estimator.predict(data[HEAVY_TEXT_COLUMN]).shape == (len(data), len(LABEL_COLUMNS))
 
 
+def test_holdout_split_is_disjoint_and_reproducible():
+    from toxic_comments.splits import train_validation_test_split
+
+    data = pd.DataFrame({"id": range(100),
+                         **{label: [0, 1] * 50 for label in LABEL_COLUMNS}})
+    splits = train_validation_test_split(data, random_state=42)
+    repeated = train_validation_test_split(data, random_state=42)
+    assert [len(frame) for frame in splits] == [80, 10, 10]
+    ids = [set(frame["id"]) for frame in splits]
+    assert ids[0].isdisjoint(ids[1])
+    assert ids[0].isdisjoint(ids[2])
+    assert ids[1].isdisjoint(ids[2])
+    assert set.union(*ids) == set(data["id"])
+    for first, second in zip(splits, repeated):
+        pd.testing.assert_frame_equal(first, second)
+
+
 def test_summarize_folds_reports_mean_and_spread():
     metrics = pd.DataFrame(
         {
