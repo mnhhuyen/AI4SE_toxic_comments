@@ -27,17 +27,18 @@ def test_registry_includes_roberta_label_dependency():
         assert hasattr(estimator, "fit")
 
 
-def test_dpcnn_scaffold_is_importable():
-    try:
-        build_dpcnn_classifier()
-    except ImportError as exc:
-        assert "tensorflow" in str(exc)
-    except NotImplementedError as exc:
-        assert "pipeline" in str(exc)
+def test_dpcnn_builder_returns_estimator_or_missing_dependency():
+    estimator = build_dpcnn_classifier()
+    if isinstance(estimator, MissingDependencyEstimator):
+        with pytest.raises(ImportError, match="torch"):
+            estimator.fit(["a"], [[0] * len(LABEL_COLUMNS)])
+    else:
+        assert hasattr(estimator, "predict_proba")
 
 
 @pytest.mark.parametrize(
-    "name", ["birnn_max_attention", "bilstm_max_attention", "bigru_shared_max_attention"]
+    "name",
+    ["birnn_max_attention", "bilstm_max_attention", "bigru_shared_max_attention", "dpcnn"],
 )
 def test_registry_includes_recurrent_models(name):
     estimator = build_models(max_features=20)[name]
