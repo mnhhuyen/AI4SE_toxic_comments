@@ -28,6 +28,16 @@ from toxic_comments.models.rnn import build_rnn_classifier
 from toxic_comments.models.tfidf_logreg import build_tfidf_logistic_regression
 
 
+def _build_roberta_standard(device: str | None):
+    """Deferred import, same pattern as ``_build_roberta_label_dependency``."""
+
+    try:
+        from toxic_comments.models.roberta_standard import build_roberta_standard
+    except ImportError:
+        return MissingDependencyEstimator("transformers", "roberta_standard")
+    return build_roberta_standard(device=device)
+
+
 def _build_roberta_label_dependency(device: str | None):
     """Deferred import: roberta_label_dependency.py defines torch.nn.Module
     subclasses, so — unlike models/dpcnn.py's deferred-import-inside-function
@@ -139,6 +149,7 @@ def build_models(
         ),
         "dpcnn": build_dpcnn_classifier(embedding_dir=embedding_dir, device=device),
         "roberta_label_dependency": _build_roberta_label_dependency(device=device),
+        "roberta_standard": _build_roberta_standard(device=device),
         "bigru_max_attention": _build_bigru(
             embedding_path=embedding_dir / FASTTEXT_VECTOR_FILE,
             max_embedding_vectors=max_embedding_vectors,
