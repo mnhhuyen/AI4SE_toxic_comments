@@ -7,6 +7,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+from tqdm.auto import tqdm
 
 from toxic_comments.config import (
     EMBEDDINGS_DIR,
@@ -191,7 +192,8 @@ def train_from_folds(
     metrics = []
     per_label_frames = []
 
-    for fold_dir in sorted(folds_dir.glob("fold_*")):
+    fold_dirs = sorted(folds_dir.glob("fold_*"))
+    for fold_dir in tqdm(fold_dirs, desc=f"{model_name} folds", unit="fold"):
         train_path = fold_dir / "train.csv"
         test_path = fold_dir / "test.csv"
         if not train_path.exists() or not test_path.exists():

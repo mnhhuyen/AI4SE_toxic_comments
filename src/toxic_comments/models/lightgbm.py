@@ -27,8 +27,10 @@ def build_tfidf_lightgbm_classifier(
             learning_rate=0.05,
             num_leaves=31,
             random_state=42,
-            n_jobs=-1,
-        )
+            n_jobs=1,
+            verbose=-1,
+        ),
+        n_jobs=-1,
     )
     return Pipeline(
         steps=[

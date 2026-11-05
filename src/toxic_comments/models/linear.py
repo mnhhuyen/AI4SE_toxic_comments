@@ -20,7 +20,8 @@ def _one_vs_rest_logistic(c_value: float) -> OneVsRestClassifier:
             class_weight="balanced",
             max_iter=1000,
             random_state=42,
-        )
+        ),
+        n_jobs=-1,
     )
 
 
