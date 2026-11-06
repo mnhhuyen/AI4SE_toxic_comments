@@ -37,10 +37,13 @@ notebooks/
   train_roberta_label_dependency_folds.ipynb  # RoBERTa + label-dependency head, k-fold
   toxic_comment_seminar_2.ipynb            # seminar notebook
 report/
-  figures/                     # architecture / RQ diagrams (.tex, .svg)
-  section-5-5.tex              # report sections
-  methodology-slides.html
-  run_rq2_pooled.py            # script for the RQ2 pooled FastText LR/LightGBM experiment
+  Report-Seminar2.pdf          # seminar 2 report
+  figures/
+    software-architecture.svg, dataset-backends.tex, implementation-workflows.tex
+    rq1-representation-branches.tex, rq1_drawio.{png,svg}   # RQ1 diagrams
+    rq2-three-branches.tex                                  # RQ2 diagram
+    rq3-label-dependency.tex                                # RQ3 diagram
+    bigru_architecture.png, roberta_standard_architecture.png, roberta_ld_architecture.png
 results/                       # CV metrics, per-label metrics, plots, run folders (e.g. rq2_pooled_<timestamp>/)
 src/toxic_comments/
   __main__.py, cli.py          # `python -m toxic_comments` entry point
