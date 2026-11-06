@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
 import joblib
@@ -26,6 +28,14 @@ from toxic_comments.evaluation import (
 from toxic_comments.splits import train_validation_test_split
 from toxic_comments.models.registry import build_models
 from toxic_comments.thresholds import ThresholdedClassifier
+
+
+@contextmanager
+def _stage(name: str):
+    start = time.perf_counter()
+    tqdm.write(f"{name}...")
+    yield
+    tqdm.write(f"{name} done in {time.perf_counter() - start:.1f}s")
 
 
 def train_model(
@@ -202,20 +212,22 @@ def train_from_folds(
         fold_name = fold_dir.name
         train_data = pd.read_csv(train_path)
         test_data = pd.read_csv(test_path)
-        estimator = train_model(
-            train_data,
-            model_name=model_name,
-            text_column=text_column,
-            max_features=max_features,
-            embedding_dir=embedding_dir,
-            max_embedding_vectors=max_embedding_vectors,
-            embedding_pooling=embedding_pooling,
-            tune_thresholds=tune_thresholds,
-        )
+        with _stage(f"[{fold_name}] fit {model_name}"):
+            estimator = train_model(
+                train_data,
+                model_name=model_name,
+                text_column=text_column,
+                max_features=max_features,
+                embedding_dir=embedding_dir,
+                max_embedding_vectors=max_embedding_vectors,
+                embedding_pooling=embedding_pooling,
+                tune_thresholds=tune_thresholds,
+            )
 
-        aggregate, per_label = evaluate_model_detailed(
-            estimator, test_data, text_column=text_column
-        )
+        with _stage(f"[{fold_name}] evaluate"):
+            aggregate, per_label = evaluate_model_detailed(
+                estimator, test_data, text_column=text_column
+            )
         metrics.append(
             {
                 "model_name": model_name,
@@ -229,9 +241,10 @@ def train_from_folds(
         per_label.insert(0, "model_name", model_name)
         per_label_frames.append(per_label)
 
-        model_paths.append(
-            save_model(estimator, output_dir / fold_name / f"{model_name}.joblib")
-        )
+        with _stage(f"[{fold_name}] save"):
+            model_paths.append(
+                save_model(estimator, output_dir / fold_name / f"{model_name}.joblib")
+            )
 
     if not model_paths:
         raise ValueError(f"No fold_N/train.csv and fold_N/test.csv files found in {folds_dir}")

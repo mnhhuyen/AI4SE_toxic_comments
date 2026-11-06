@@ -15,7 +15,10 @@ from toxic_comments.models.embedding_logreg import (
     build_lexvec_logistic_regression,
     build_word2vec_logistic_regression,
 )
-from toxic_comments.models.lightgbm import build_tfidf_lightgbm_classifier
+from toxic_comments.models.lightgbm import (
+    build_fasttext_lightgbm_classifier,
+    build_tfidf_lightgbm_classifier,
+)
 from toxic_comments.models.linear import (
     build_raw_text_logistic_regression,
     build_tfidf_complement_nb,
@@ -116,6 +119,11 @@ def build_models(
         "tfidf_sgd_logistic": build_tfidf_sgd_logistic(max_features=max_features),
         "tfidf_complement_nb": build_tfidf_complement_nb(max_features=max_features),
         "fasttext_logistic_regression": build_fasttext_logistic_regression(
+            embedding_dir=embedding_dir,
+            max_vectors=max_embedding_vectors,
+            pooling=embedding_pooling,
+        ),
+        "fasttext_lightgbm": build_fasttext_lightgbm_classifier(
             embedding_dir=embedding_dir,
             max_vectors=max_embedding_vectors,
             pooling=embedding_pooling,

@@ -9,6 +9,7 @@ from typing import Iterable
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+from tqdm.auto import tqdm
 
 TOKEN_RE = re.compile(r"(?u)\b\w+\b")
 
@@ -40,7 +41,10 @@ class MeanEmbeddingVectorizer(BaseEstimator, TransformerMixin):
     def transform(self, x: Iterable[str]) -> np.ndarray:
         check_is_fitted_embedding(self)
         texts = pd.Series(x).fillna("").astype(str)
-        vectors = [self._vectorize_text(text) for text in texts]
+        vectors = [
+            self._vectorize_text(text)
+            for text in tqdm(texts, desc="pooling", unit="text", leave=False)
+        ]
         if not vectors:
             return np.empty((0, self.output_dim_), dtype=np.float32)
         return np.vstack(vectors)
@@ -196,7 +200,9 @@ class SupervisedAttentionEmbeddingVectorizer(MeanEmbeddingVectorizer):
 
         super().fit(texts, y)
         counts = Counter(
-            token for text in texts for token in tokenize(text, lowercase=self.lowercase)
+            token
+            for text in tqdm(texts, desc="vocab", unit="text", leave=False)
+            for token in tokenize(text, lowercase=self.lowercase)
             if token in self.embedding_
         )
         self.vocab_ = {token: index + 1 for index, (token, _) in enumerate(counts.most_common())}
@@ -248,9 +254,10 @@ class SupervisedAttentionEmbeddingVectorizer(MeanEmbeddingVectorizer):
         loss_fn = nn.BCEWithLogitsLoss()
         self.loss_history_ = []
         model.train()
-        for _ in range(self.num_epochs):
+        epochs = tqdm(range(self.num_epochs), desc=f"attention ({self.device_})", unit="epoch", leave=False)
+        for _ in epochs:
             total = 0.0
-            for batch_ids, batch_targets in loader:
+            for batch_ids, batch_targets in tqdm(loader, desc="batches", leave=False):
                 batch_ids = batch_ids.to(self.device_)
                 batch_targets = batch_targets.to(self.device_)
                 optimizer.zero_grad()
@@ -260,6 +267,7 @@ class SupervisedAttentionEmbeddingVectorizer(MeanEmbeddingVectorizer):
                 optimizer.step()
                 total += loss.item()
             self.loss_history_.append(total / max(len(loader), 1))
+            epochs.set_postfix(loss=f"{self.loss_history_[-1]:.4f}")
 
         self.attention_W_ = model.projection.weight.detach().cpu().numpy().T.copy()
         self.attention_b_ = model.projection.bias.detach().cpu().numpy().copy()
@@ -343,7 +351,8 @@ def load_text_embeddings(
     embeddings: dict[str, np.ndarray] = {}
     expected_dim: int | None = None
     with embedding_path.open("r", encoding=encoding, errors="ignore") as file:
-        for line_number, line in enumerate(file, start=1):
+        lines = tqdm(file, desc=f"load {embedding_path.name}", unit=" lines", leave=False)
+        for line_number, line in enumerate(lines, start=1):
             parts = line.rstrip().split()
             if not parts:
                 continue

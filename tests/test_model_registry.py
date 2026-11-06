@@ -11,6 +11,7 @@ def test_registry_includes_lightgbm_model_name():
     models = build_models(max_features=20)
 
     assert "tfidf_lightgbm" in models
+    assert "fasttext_lightgbm" in models
 
 
 def test_registry_includes_roberta_label_dependency():
