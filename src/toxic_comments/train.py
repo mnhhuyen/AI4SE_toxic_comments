@@ -9,6 +9,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+from sklearn.pipeline import Pipeline
 from tqdm.auto import tqdm
 
 from toxic_comments.config import (
@@ -68,6 +69,8 @@ def train_model(
         raise ValueError(f"Unknown model '{model_name}'. Available models: {available}")
 
     estimator = models[model_name]
+    if isinstance(estimator, Pipeline):
+        estimator.set_params(verbose=True)
     if tune_thresholds:
         estimator = ThresholdedClassifier(estimator)
 
@@ -256,6 +259,89 @@ def train_from_folds(
         results_dir / f"{model_name}_fold_per_label.csv", index=False
     )
     return model_paths, metrics_frame
+
+
+def train_pooled_from_folds(
+    folds_dir: Path,
+    model_names: list[str],
+    output_dir: Path = MODELS_DIR,
+    results_dir: Path = RESULTS_DIR,
+    text_column: str = HEAVY_TEXT_COLUMN,
+    embedding_dir: Path = EMBEDDINGS_DIR,
+    max_embedding_vectors: int | None = None,
+    embedding_pooling: str = "mean",
+) -> dict[str, pd.DataFrame]:
+    """Fit the shared embeddings step once per fold and reuse its features for every model."""
+
+    metrics = {name: [] for name in model_names}
+    per_label_frames = {name: [] for name in model_names}
+
+    for fold_dir in tqdm(sorted(folds_dir.glob("fold_*")), desc="folds", unit="fold"):
+        train_path = fold_dir / "train.csv"
+        test_path = fold_dir / "test.csv"
+        if not train_path.exists() or not test_path.exists():
+            continue
+
+        fold_name = fold_dir.name
+        train_data = pd.read_csv(train_path)
+        test_data = pd.read_csv(test_path)
+        y_train = train_data[LABEL_COLUMNS].to_numpy()
+        y_test = test_data[LABEL_COLUMNS].to_numpy()
+
+        models = build_models(
+            embedding_dir=embedding_dir,
+            max_embedding_vectors=max_embedding_vectors,
+            embedding_pooling=embedding_pooling,
+        )
+        pipelines = {name: models[name] for name in model_names}
+        for name, pipeline in pipelines.items():
+            if not isinstance(pipeline, Pipeline) or pipeline.steps[0][0] != "embeddings":
+                raise ValueError(f"{name} must be a Pipeline starting with an 'embeddings' step")
+
+        vectorizer = pipelines[model_names[0]].named_steps["embeddings"]
+        if any(pipeline.steps[0][1].get_params() != vectorizer.get_params()
+               for pipeline in pipelines.values()):
+            raise ValueError("All models must share the same embeddings configuration")
+        with _stage(f"[{fold_name}] embeddings"):
+            features_train = vectorizer.fit_transform(
+                train_data[text_column].fillna("").astype(str), y_train
+            )
+            features_test = vectorizer.transform(test_data[text_column].fillna("").astype(str))
+
+        for name, pipeline in pipelines.items():
+            pipeline.steps[0] = ("embeddings", vectorizer)
+            head = pipeline[1:]
+            with _stage(f"[{fold_name}] fit {name}"):
+                head.fit(features_train, y_train)
+            y_pred = head.predict(features_test)
+            y_score = predict_scores(head, features_test)
+            metrics[name].append(
+                {
+                    "model_name": name,
+                    "fold": fold_name,
+                    "split": "test",
+                    "rows": len(test_data),
+                    **evaluate_predictions(y_test, y_pred, y_score),
+                }
+            )
+            per_label = evaluate_per_label(y_test, y_pred, y_score)
+            per_label.insert(0, "fold", fold_name)
+            per_label.insert(0, "model_name", name)
+            per_label_frames[name].append(per_label)
+            save_model(pipeline, output_dir / fold_name / f"{name}.joblib")
+
+    if not any(metrics.values()):
+        raise ValueError(f"No fold_N/train.csv and fold_N/test.csv files found in {folds_dir}")
+
+    results_dir.mkdir(parents=True, exist_ok=True)
+    frames = {}
+    for name in model_names:
+        frames[name] = pd.DataFrame(metrics[name])
+        frames[name].to_csv(results_dir / f"{name}_fold_metrics.csv", index=False)
+        pd.concat(per_label_frames[name], ignore_index=True).to_csv(
+            results_dir / f"{name}_fold_per_label.csv", index=False
+        )
+    return frames
 
 
 def parse_args() -> argparse.Namespace:

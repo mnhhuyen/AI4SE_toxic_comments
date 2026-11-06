@@ -158,6 +158,26 @@ def test_supervised_train_transform_parity(tmp_path, monkeypatch, vectorizer_cla
     np.testing.assert_allclose(vectorizer.transform(["you"])[0, -3:], [0, 0.1, 0])
 
 
+@pytest.mark.parametrize("vectorizer_class", [
+    SupervisedAttentionEmbeddingVectorizer, MaxSupervisedAttentionEmbeddingVectorizer,
+])
+def test_supervised_batched_transform_matches_per_text(tmp_path, vectorizer_class):
+    pytest.importorskip("torch")
+    import pickle
+
+    texts = ["awful hate you", "nice thanks", "unknown", "", "hate hate nice you awful"]
+    labels = np.array([[1, 0], [0, 1], [0, 0], [0, 0], [1, 0]], dtype=np.float32)
+    vectorizer = vectorizer_class(
+        _write_tiny_glove(tmp_path), max_length=3, num_epochs=1, batch_size=2, device="cpu",
+    ).fit(texts, labels)
+
+    expected = MeanEmbeddingVectorizer.transform(vectorizer, texts)
+    np.testing.assert_allclose(vectorizer.transform(texts), expected, atol=1e-6)
+    restored = pickle.loads(pickle.dumps(vectorizer))
+    assert "embedding_" not in restored.__dict__
+    np.testing.assert_allclose(restored.transform(texts), expected, atol=1e-6)
+
+
 @pytest.mark.parametrize("max_length", [0, -1, 1.5])
 def test_supervised_rejects_invalid_length(tmp_path, max_length):
     vectorizer = SupervisedAttentionEmbeddingVectorizer("unused", max_length=max_length)

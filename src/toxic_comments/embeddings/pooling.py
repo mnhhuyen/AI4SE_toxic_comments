@@ -38,7 +38,21 @@ class MeanEmbeddingVectorizer(BaseEstimator, TransformerMixin):
         self.embedding_dim_ = len(next(iter(self.embedding_.values())))
         return self
 
+    def __getstate__(self):
+        # Vectors are reloaded from embedding_path, keeping saved models small.
+        state = super().__getstate__()
+        if getattr(self, "embedding_path", None) is not None:
+            state.pop("embedding_", None)
+        return state
+
+    def _ensure_embedding(self) -> None:
+        if not hasattr(self, "embedding_") and hasattr(self, "embedding_dim_"):
+            self.embedding_ = load_text_embeddings(
+                Path(self.embedding_path), encoding=self.encoding, max_vectors=self.max_vectors
+            )
+
     def transform(self, x: Iterable[str]) -> np.ndarray:
+        self._ensure_embedding()
         check_is_fitted_embedding(self)
         texts = pd.Series(x).fillna("").astype(str)
         vectors = [
@@ -188,7 +202,6 @@ class SupervisedAttentionEmbeddingVectorizer(MeanEmbeddingVectorizer):
     def fit(self, x, y=None):
         if y is None:
             raise ValueError("Supervised attention requires multi-label targets y.")
-        from collections import Counter
 
         self._validate_max_length()
         texts = pd.Series(x).fillna("").astype(str).tolist()
@@ -199,25 +212,65 @@ class SupervisedAttentionEmbeddingVectorizer(MeanEmbeddingVectorizer):
             raise ValueError("Cannot fit supervised attention on an empty dataset.")
 
         super().fit(texts, y)
-        counts = Counter(
-            token
-            for text in tqdm(texts, desc="vocab", unit="text", leave=False)
-            for token in tokenize(text, lowercase=self.lowercase)
-            if token in self.embedding_
-        )
-        self.vocab_ = {token: index + 1 for index, (token, _) in enumerate(counts.most_common())}
-        matrix = np.zeros((len(self.vocab_) + 1, self.embedding_dim_), dtype=np.float32)
-        for token, index in self.vocab_.items():
+        self.vocab_, matrix, ids = self._encode(texts)
+        return self._fit_attention(matrix, ids, targets)
+
+    def _encode(self, texts):
+        """Return (vocab, embedding matrix, padded ids) for known tokens, truncated to max_length."""
+        from collections import Counter
+
+        tokens = [
+            [token for token in tokenize(text, lowercase=self.lowercase) if token in self.embedding_]
+            for text in tqdm(texts, desc="tokenize", unit="text", leave=False)
+        ]
+        counts = Counter(token for row in tokens for token in row)
+        vocab = {token: index + 1 for index, (token, _) in enumerate(counts.most_common())}
+        matrix = np.zeros((len(vocab) + 1, self.embedding_dim_), dtype=np.float32)
+        for token, index in vocab.items():
             matrix[index] = self.embedding_[token]
 
         ids = np.zeros((len(texts), self.max_length), dtype=np.int64)
-        for row, text in enumerate(texts):
-            tokens = tokenize(text, lowercase=self.lowercase)
-            token_ids = [self.vocab_[t] for t in tokens if t in self.vocab_][:self.max_length]
+        for row, known in enumerate(tokens):
+            token_ids = [vocab[token] for token in known[:self.max_length]]
             if token_ids:
                 ids[row, :len(token_ids)] = token_ids
+        return vocab, matrix, ids
 
-        return self._fit_attention(matrix, ids, targets)
+    def transform(self, x):
+        try:
+            import torch
+        except ImportError:
+            return super().transform(x)
+
+        self._ensure_embedding()
+        check_is_fitted_embedding(self)
+        check_is_fitted_supervised_attention(self)
+        _, matrix, ids = self._encode(pd.Series(x).fillna("").astype(str).tolist())
+        device = self.device or ("cuda" if torch.cuda.is_available() else "cpu")
+        embedding = torch.as_tensor(matrix, device=device)
+        weight = torch.as_tensor(self.attention_W_, device=device)
+        bias = torch.as_tensor(self.attention_b_, device=device)
+        context = torch.as_tensor(self.attention_v_, device=device)
+        include_max = self.output_dim_ == 2 * self.embedding_dim_
+
+        pooled = [np.empty((0, self.output_dim_), dtype=np.float32)]
+        with torch.no_grad():
+            for start in tqdm(range(0, len(ids), 1024), desc=f"pooling ({device})", leave=False):
+                batch = torch.as_tensor(ids[start:start + 1024], device=device)
+                mask = batch != 0
+                hidden = embedding[batch]
+                scores = torch.tanh(hidden @ weight + bias) @ context
+                scores = scores.masked_fill(~mask, torch.finfo(scores.dtype).min)
+                weights = torch.softmax(scores, dim=1).masked_fill(~mask, 0.0)
+                vectors = torch.bmm(weights.unsqueeze(1), hidden).squeeze(1)
+                if include_max:
+                    maximum = hidden.masked_fill(
+                        ~mask.unsqueeze(-1), torch.finfo(hidden.dtype).min
+                    ).max(dim=1).values
+                    maximum = torch.where(mask.any(dim=1, keepdim=True), maximum, 0.0)
+                    vectors = torch.cat([maximum, vectors], dim=1)
+                pooled.append(vectors.cpu().numpy())
+        return np.vstack(pooled)
 
     def _validate_max_length(self):
         if not isinstance(self.max_length, (int, np.integer)) or self.max_length < 1:
@@ -332,13 +385,28 @@ def tokenize(text: str, lowercase: bool = True) -> list[str]:
     return TOKEN_RE.findall(text)
 
 
+_EMBEDDING_CACHE: dict[tuple, dict[str, np.ndarray]] = {}
+
+
 def load_text_embeddings(
     embedding_path: Path,
     encoding: str = "utf-8",
     max_vectors: int | None = None,
 ) -> dict[str, np.ndarray]:
-    """Load a word-vector text file: token val1 val2 ..."""
+    """Load a word-vector text file once per process and reuse it across folds."""
 
+    key = (str(Path(embedding_path).resolve()), encoding, max_vectors)
+    if key not in _EMBEDDING_CACHE:
+        _EMBEDDING_CACHE.clear()
+        _EMBEDDING_CACHE[key] = _read_text_embeddings(embedding_path, encoding, max_vectors)
+    return _EMBEDDING_CACHE[key]
+
+
+def _read_text_embeddings(
+    embedding_path: Path,
+    encoding: str = "utf-8",
+    max_vectors: int | None = None,
+) -> dict[str, np.ndarray]:
     if max_vectors is not None and max_vectors < 1:
         raise ValueError("max_vectors must be positive or None")
 

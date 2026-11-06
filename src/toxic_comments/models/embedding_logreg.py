@@ -31,7 +31,8 @@ def build_embedding_logistic_regression(
             class_weight="balanced",
             max_iter=1000,
             random_state=42,
-        )
+        ),
+        n_jobs=-1,
     )
     return Pipeline(
         steps=[
