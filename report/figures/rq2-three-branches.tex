@@ -1,0 +1,40 @@
+% Preamble: \usepackage{graphicx,tikz}
+% \usetikzlibrary{arrows.meta,positioning}
+% Insert: \input{figures/rq2-three-branches}
+\begin{figure*}[t]
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+ box/.style={draw,rounded corners=2pt,align=center,font=\small,inner sep=5pt},
+ branch/.style={box,text width=92mm,minimum height=23mm},
+ arr/.style={semithick,-{Stealth[length=2mm]}},
+ lab/.style={font=\scriptsize,fill=white,inner sep=2pt,align=center}
+]
+\node[box,text width=27mm,minimum height=18mm] (input) at (0,0)
+ {Cleaned comment\\\textbf{FastText embeddings}\\Frozen, 300 dimensions};
+\node[branch] (pooled) at (8,3)
+ {\textbf{Pooled-feature classifiers}\\Max + supervised attention on token embeddings\\$\rightarrow$ LR / LightGBM (fitted separately)};
+\node[branch] (recurrent) at (8,0)
+ {\textbf{Recurrent models}\\Bi-RNN / Bi-LSTM / Bi-GRU\\$\rightarrow$ Max + supervised attention on hidden states\\$\rightarrow$ Classification head (joint training)};
+\node[branch] (cnn) at (8,-3)
+ {\textbf{Convolutional model}\\DPCNN: convolution, residual blocks, downsampling\\$\rightarrow$ Aggregation and classification head};
+\node[box,text width=30mm,minimum height=22mm] (out) at (17.5,0)
+ {\textbf{Six label scores}\\Five-fold evaluation\\Macro ROC-AUC};
+\coordinate (split) at (2.3,0);
+\draw[semithick] (input.east) -- (split);
+\draw[arr] (split) |- (pooled.west);
+\draw[arr] (split) -- (recurrent.west);
+\draw[arr] (split) |- (cnn.west);
+\node[lab] at (2.3,1.55) {Token\\vectors};
+\draw[arr] (pooled.east) -- (14.3,3) -- (14.3,0.65)
+ -- ([yshift=6.5mm]out.west);
+\draw[arr] (recurrent.east) -- node[lab,above] {predict} (out.west);
+\draw[arr] (cnn.east) -- (14.3,-3) -- (14.3,-0.65)
+ -- ([yshift=-6.5mm]out.west);
+\node[lab] at (14.3,3.3) {predict};
+\node[lab] at (14.3,-3.3) {predict};
+\end{tikzpicture}%
+}
+\caption{Modeling pipelines for RQ2 using pretrained FastText embeddings. The pooled-feature branch concatenates max pooling and supervised attention over token embeddings, then fits logistic regression (LR) or LightGBM on the resulting features. The recurrent branch applies max pooling and supervised attention to encoder hidden states, with attention and the classification head trained jointly with the encoder. DPCNN uses a convolutional hierarchy. Each pipeline produces six label-specific scores and is evaluated separately; the branches do not form an ensemble. Supervised pooling is fitted using training data only within each fold.}
+\label{fig:rq2-pipelines}
+\end{figure*}

@@ -1,0 +1,34 @@
+% Preamble: \usepackage{graphicx,tikz}
+% \usetikzlibrary{arrows.meta,positioning}
+% Insert: \input{figures/implementation-workflows}
+\begin{figure*}[t]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+ box/.style={draw,rounded corners=2pt,align=center,font=\small,inner sep=6pt},
+ arr/.style={semithick,-{Stealth[length=2mm]}},
+ lab/.style={font=\scriptsize,fill=white,inner sep=2pt,align=center}
+]
+\node[box,text width=48mm] (entry) at (0,0)
+ {\textbf{Entry points}\\Notebooks and command-line interface};
+\node[box,text width=50mm] (experiment) at (-4,-2)
+ {\textbf{Repository-based experiment runner}\\\texttt{run\_experiment(repository, ...)}\\Dataset access through repository};
+\node[box,text width=50mm] (training) at (4,-2)
+ {\textbf{Training workflow}\\\texttt{train.py}\\Direct CSV access supported};
+\node[box,text width=116mm] (shared) at (0,-4.4)
+ {\textbf{Shared package components}\\Cleaning $\cdot$ splits $\cdot$ embeddings $\cdot$ model construction\\Training and evaluation utilities};
+\node[box,text width=45mm] (models) at (-4,-6.7)
+ {\textbf{Fitted model artifacts}\\\texttt{models/}};
+\node[box,text width=45mm] (metrics) at (4,-6.7)
+ {\textbf{Evaluation outputs}\\\texttt{results/}};
+\draw[arr] (entry.south) -- (0,-0.9) -| node[lab,pos=0.75,right] {invoke} (experiment.north);
+\draw[arr] (0,-0.9) -| node[lab,pos=0.75,right] {invoke} (training.north);
+\draw[arr] (experiment.south) -- node[lab,right] {reuse} (experiment.south |- shared.north);
+\draw[arr] (training.south) -- node[lab,right] {reuse} (training.south |- shared.north);
+\draw[arr] (shared.south -| models.north) -- node[lab,right] {training workflows persist} (models.north);
+\draw[arr] (shared.south -| metrics.north) -- node[lab,right] {evaluation workflows write} (metrics.north);
+\end{tikzpicture}%
+}
+\caption{Implementation workflows and reusable components. Notebooks and command-line entry points invoke a repository-based experiment runner or a complementary training workflow. Both reuse package components, while their orchestration and persistence differ. Training workflows can save fitted models, and evaluation workflows write metrics and other outputs to the filesystem; the diagram does not imply that every entry point writes every artifact type.}
+\label{fig:implementation-workflows}
+\end{figure*}

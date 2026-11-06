@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 660" role="img" aria-labelledby="title desc">
+<title id="title">RQ1: alternative representations with the same classifier family</title><desc id="desc">A comment takes either a TF-IDF branch producing sparse features or a pretrained embedding and pooling branch producing dense features. Each representation is evaluated separately using one-vs-rest logistic regression to produce six label scores. The branches are alternatives, not concatenated inputs.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#496277"/></marker></defs>
+<rect width="1440" height="660" fill="#ffffff"/>
+<g font-family="Arial, Helvetica, sans-serif" fill="#193448">
+<text x="44" y="52" font-size="19" font-weight="700" letter-spacing="2" fill="#526b7b">RQ1 · REPRESENTATION COMPARISON</text>
+<text x="44" y="100" font-size="34" font-weight="700">Change the representation. Keep the classifier family.</text>
+<rect x="40" y="278" width="190" height="116" rx="10" fill="#eff3f6" stroke="#bccbd6" stroke-width="2"/>
+<text x="135" y="325" text-anchor="middle" font-size="25" font-weight="700">Comment</text><text x="135" y="357" text-anchor="middle" font-size="19" fill="#526b7b">Cleaned text</text>
+<rect x="318" y="164" width="570" height="132" rx="10" fill="#edf5fb" stroke="#33739f" stroke-width="2"/>
+<text x="345" y="200" font-size="17" font-weight="700" fill="#33739f">SPARSE BRANCH · 1 CONFIGURATION</text>
+<text x="345" y="239" font-size="27" font-weight="700">Word-level TF-IDF</text><text x="345" y="272" font-size="20">Unigrams + bigrams</text>
+<rect x="318" y="368" width="570" height="174" rx="10" fill="#edf8f6" stroke="#207e72" stroke-width="2"/>
+<text x="345" y="404" font-size="17" font-weight="700" fill="#207e72">DENSE BRANCH · 5 × 6 = 30 CONFIGURATIONS</text>
+<text x="345" y="445" font-size="24" font-weight="700">Pretrained embeddings</text>
+<text x="345" y="478" font-size="18">FastText · GloVe · Word2Vec</text><text x="345" y="505" font-size="18">LexVec · BPEmb</text>
+<path d="M637 449H677" stroke="#496277" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+<text x="698" y="445" font-size="24" font-weight="700">Pooling</text><text x="698" y="478" font-size="19">6 strategies</text><text x="698" y="505" font-size="17" fill="#526b7b">Frozen embeddings</text>
+<path d="M230 336H270V230H318 M270 336V455H318" fill="none" stroke="#496277" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M270 230H318" fill="none" stroke="#496277" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="270" y="320" text-anchor="middle" font-size="16" fill="#526b7b">either</text>
+<rect x="1020" y="254" width="360" height="166" rx="10" fill="#193448"/>
+<text x="1200" y="298" text-anchor="middle" font-size="25" font-weight="700" fill="#ffffff">One-vs-Rest</text><text x="1200" y="333" text-anchor="middle" font-size="27" font-weight="700" fill="#ffffff">Logistic Regression</text><text x="1200" y="372" text-anchor="middle" font-size="19" fill="#d6e5ee">One binary classifier per label</text><text x="1200" y="399" text-anchor="middle" font-size="17" fill="#d6e5ee">Fitted separately for each configuration</text>
+<path d="M888 230H961V285H1020" fill="none" stroke="#496277" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="951" y="189" text-anchor="middle" font-size="18" fill="#33739f">Sparse</text><text x="951" y="213" text-anchor="middle" font-size="18" fill="#33739f">features</text>
+<path d="M888 455H961V389H1020" fill="none" stroke="#496277" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="951" y="485" text-anchor="middle" font-size="18" fill="#207e72">Dense</text><text x="951" y="509" text-anchor="middle" font-size="18" fill="#207e72">features</text>
+<path d="M1200 420V468" fill="none" stroke="#496277" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="1200" y="504" text-anchor="middle" font-size="24" font-weight="700">6 label scores</text><text x="1200" y="533" text-anchor="middle" font-size="18" fill="#526b7b">Holdout Macro ROC-AUC</text>
+<path d="M44 580H1396" stroke="#ccd9e2" stroke-width="1.5"/>
+<text x="44" y="616" font-size="20" fill="#526b7b">Alternative representations, evaluated separately — the two branches are not concatenated.</text>
+</g></svg>

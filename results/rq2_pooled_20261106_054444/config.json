@@ -1,0 +1,32 @@
+{
+  "text_column": "comment_heavy",
+  "labels": [
+    "toxic",
+    "severe_toxic",
+    "obscene",
+    "threat",
+    "insult",
+    "identity_hate"
+  ],
+  "seed": 42,
+  "embedding": "/home/jkl0909/minhhuyen/toxic-comments/data/embeddings/fasttext/wiki-news-300d-1M.vec",
+  "pooling": "max_supervised_attention",
+  "max_length": 200,
+  "attention_epochs": 3,
+  "attention_batch_size": 256,
+  "attention_learning_rate": 0.001,
+  "attention_dropout": 0.1,
+  "device": "cpu",
+  "lr_C": 1.0,
+  "lr_class_weight": "balanced",
+  "lr_max_iter": 1000,
+  "lightgbm_n_estimators": 300,
+  "lightgbm_learning_rate": 0.05,
+  "lightgbm_num_leaves": 31,
+  "threshold": 0.5,
+  "std_ddof": 0,
+  "python": "3.11.15",
+  "torch": "2.5.1+cu121",
+  "sklearn": "1.5.2",
+  "lightgbm": "4.5.0"
+}

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 780" role="img" aria-labelledby="title desc">
+<title id="title">Software architecture and interchangeable dataset backends</title><desc id="desc">Notebooks and the command line invoke experiment or training workflows. The experiment runner loads DataFrames through a shared repository interface backed by memory or CSV. The training workflow can read CSV directly. Both reuse package components and write filesystem artifacts.</desc>
+<rect width="1120" height="780" fill="white"/>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#334155"/></marker></defs>
+<g font-family="Arial, Helvetica, sans-serif" fill="#172b3a" font-size="17">
+<text x="30" y="32" font-size="21" font-weight="bold">Dataset access can change without changing the experiment logic</text>
+<rect x="330" y="55" width="460" height="60" rx="5" fill="#eef3f7" stroke="#334155"/>
+<text x="560" y="80" text-anchor="middle" font-weight="bold">Entry points</text><text x="560" y="102" text-anchor="middle">notebooks/ and command-line interface</text>
+<path d="M440 115V155" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="450" y="141" font-size="14">invoke</text>
+<path d="M680 115V155" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="690" y="141" font-size="14">invoke</text>
+<rect x="260" y="155" width="300" height="70" rx="5" fill="#eef3f7" stroke="#334155"/><text x="410" y="183" text-anchor="middle" font-weight="bold">experiment.py</text><text x="410" y="207" text-anchor="middle">run_experiment(repository, ...)</text>
+<rect x="620" y="155" width="260" height="70" rx="5" fill="#eef3f7" stroke="#334155"/><text x="750" y="183" text-anchor="middle" font-weight="bold">train.py</text><text x="750" y="207" text-anchor="middle">holdout / folds / full</text>
+<rect x="30" y="305" width="330" height="85" rx="5" fill="#e5f2f6" stroke="#245c80" stroke-width="2"/><text x="195" y="331" text-anchor="middle" font-weight="bold">DatasetRepository (Protocol)</text><text x="195" y="355" text-anchor="middle">load() → DataFrame</text><text x="195" y="378" text-anchor="middle">save(data: DataFrame)</text>
+<path d="M320 225V270H195V305" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="45" y="258" font-size="14">calls load(); same DataFrame contract</text>
+<rect x="20" y="460" width="265" height="70" rx="5" fill="white" stroke="#334155"/><text x="152" y="489" text-anchor="middle" font-size="16">InMemoryDatasetRepository</text><text x="152" y="512" text-anchor="middle" font-size="15">stores / returns DataFrame copies</text>
+<rect x="315" y="460" width="265" height="70" rx="5" fill="white" stroke="#334155"/><text x="447" y="489" text-anchor="middle" font-size="16">CsvFileDatasetRepository</text><text x="447" y="512" text-anchor="middle" font-size="15">reads / writes CSV files</text>
+<path d="M152 460V390" fill="none" stroke="#334155" stroke-dasharray="6 4" marker-end="url(#arrow)"/><text x="164" y="428" font-size="14">implements</text>
+<path d="M447 460V420H310V390" fill="none" stroke="#334155" stroke-dasharray="6 4" marker-end="url(#arrow)"/><text x="457" y="440" font-size="14">implements</text>
+<rect x="485" y="305" width="595" height="85" rx="5" fill="#eef3f7" stroke="#334155"/><text x="782" y="331" text-anchor="middle" font-weight="bold">Reusable components in src/toxic_comments/</text><text x="782" y="355" text-anchor="middle">cleaning · splits · embeddings · model registry</text><text x="782" y="378" text-anchor="middle">model implementations · evaluation / score extraction</text>
+<path d="M505 225V305" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="515" y="284" font-size="14">uses</text>
+<path d="M750 225V305" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="760" y="275" font-size="14">uses</text>
+<rect x="650" y="460" width="430" height="70" rx="5" fill="white" stroke="#334155"/><text x="865" y="487" text-anchor="middle" font-weight="bold">Filesystem outputs</text><text x="865" y="513" text-anchor="middle">models/: fitted artifacts · results/: metrics</text>
+<path d="M1080 347H1100V440H865V460" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="830" y="432" font-size="14">workflows persist outputs</text>
+<rect x="315" y="600" width="265" height="65" rx="5" fill="white" stroke="#334155"/><text x="447" y="627" text-anchor="middle" font-weight="bold">data/</text><text x="447" y="651" text-anchor="middle" font-size="15">raw / processed / k_fold CSVs</text>
+<path d="M447 530V600" fill="none" stroke="#334155" marker-start="url(#arrow)" marker-end="url(#arrow)"/><text x="458" y="570" font-size="14">read / write</text>
+<path d="M880 190H1095V695H447V665" fill="none" stroke="#334155" marker-end="url(#arrow)"/><text x="730" y="684" font-size="14">train.py also reads CSV directly</text>
+<text x="30" y="734" font-size="15">External resources: data/embeddings/ supplies pretrained vectors to embedding and neural model loaders.</text>
+<text x="30" y="759" font-size="15">Quality and provenance: tests/ · dependency declarations · Git · embedding-notebook fingerprints.</text>
+</g></svg>

@@ -1,0 +1,32 @@
+% Preamble: \usepackage{graphicx,tikz}
+% \usetikzlibrary{arrows.meta,positioning}
+% Insert: \input{figures/dataset-backends}
+\begin{figure*}[t]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[
+ box/.style={draw,rounded corners=2pt,align=center,font=\small,inner sep=6pt},
+ arr/.style={semithick,-{Stealth[length=2mm]}},
+ impl/.style={arr,dashed},
+ lab/.style={font=\scriptsize,fill=white,inner sep=2pt,align=center}
+]
+\node[box,text width=56mm,minimum height=16mm] (memory) at (-4,0)
+ {\textbf{In-memory backend}\\\texttt{InMemoryDatasetRepository}\\Stores and returns DataFrame copies};
+\node[box,text width=56mm,minimum height=16mm] (csv) at (4,0)
+ {\textbf{File-based backend}\\\texttt{CsvFileDatasetRepository}\\Reads and writes CSV files};
+\node[box,text width=57mm,minimum height=19mm] (contract) at (0,-2.5)
+ {\textbf{DatasetRepository (Protocol)}\\\texttt{load() -> DataFrame}\\\texttt{save(data)}};
+\node[box,text width=66mm,minimum height=15mm] (runner) at (0,-5.1)
+ {\textbf{Repository-based experiment runner}\\\texttt{run\_experiment(repository, ...)} };
+\node[box,text width=94mm,minimum height=15mm] (logic) at (0,-7.3)
+ {\textbf{Unchanged downstream experiment logic}\\Validation, preprocessing, training, and evaluation};
+\draw[impl] (memory.south) -- (-4,-1.3) -| node[lab,pos=0.3,above] {implements} ([xshift=-13mm]contract.north);
+\draw[impl] (csv.south) -- (4,-1.3) -| node[lab,pos=0.3,above] {implements} ([xshift=13mm]contract.north);
+\draw[arr] ([xshift=-12mm]runner.north) -- node[lab,left] {calls \texttt{load()}} ([xshift=-12mm]contract.south);
+\draw[arr] ([xshift=12mm]contract.south) -- node[lab,right] {returns DataFrame} ([xshift=12mm]runner.north);
+\draw[arr] (runner.south) -- node[lab,right] {passes dataset} (logic.north);
+\end{tikzpicture}%
+}
+\caption{Interchangeable dataset backends in the repository-based experiment runner. Both implementations satisfy the same dataset-access protocol. A caller supplies either repository instance to \texttt{run\_experiment}; the runner calls \texttt{load()} and receives a DataFrame, leaving downstream experiment logic unchanged. Dashed arrows denote interface implementation; solid arrows denote calls or data flow. Both backends also expose \texttt{save(data)}, although the runner currently consumes only \texttt{load()}. Other training entry points may read CSV files directly, and model and metric persistence remain filesystem-based.}
+\label{fig:dataset-backends}
+\end{figure*}

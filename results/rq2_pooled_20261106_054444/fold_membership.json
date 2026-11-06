@@ -1,0 +1,37 @@
+[
+  {
+    "fold": 1,
+    "train_size": 127580,
+    "test_size": 31896,
+    "train_ids_sha256": "b6ade39ea5862c0c966302c577199bdd6cb22a79768e3026c0e1a61b64d47f68",
+    "test_ids_sha256": "26f112d3b249b60c9c32c5667948ba1533aa5366c4aeceb3334a58b9a2a04c2f"
+  },
+  {
+    "fold": 2,
+    "train_size": 127581,
+    "test_size": 31895,
+    "train_ids_sha256": "f3dc5fa87e00481cd44cfc4e516ce285ac8b9ec9670b69174d51a2799c374cae",
+    "test_ids_sha256": "9f057858fb2837992ba8c1905dcbf433c0559b21399e1712c328fd0329a40c4d"
+  },
+  {
+    "fold": 3,
+    "train_size": 127581,
+    "test_size": 31895,
+    "train_ids_sha256": "1dc45abfbc169cdaf6617c2d3c88f312e7342245eab00fbc8fbef03b538539ba",
+    "test_ids_sha256": "633ca26521c6a459eb12b9e1164b2ca37d702d1a85b3402e5394db4dd1f51441"
+  },
+  {
+    "fold": 4,
+    "train_size": 127581,
+    "test_size": 31895,
+    "train_ids_sha256": "848885d869ab4888a44fb7b160f0668e080c53b50a925510ce8edde758db9067",
+    "test_ids_sha256": "d787dcd702f37f232e375818d6b022a9002e4889d6cc677c2da2423db321a0f3"
+  },
+  {
+    "fold": 5,
+    "train_size": 127581,
+    "test_size": 31895,
+    "train_ids_sha256": "0b4844e5f404d50e5a2221e178b83f41daeb1424d9f7ae8aed5eec79f8cc560f",
+    "test_ids_sha256": "52c958ff4adcf0a99f06f1a31126c9e7154d201de5e556e1c44d59c6ba86206c"
+  }
+]

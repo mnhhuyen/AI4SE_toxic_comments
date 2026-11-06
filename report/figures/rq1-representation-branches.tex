@@ -1,0 +1,39 @@
+% Preamble requirements (add once in the main report):
+% \usepackage{graphicx}
+% \usepackage{tikz}
+% \usetikzlibrary{arrows.meta,positioning}
+% Insert with: \input{figures/rq1-representation-branches}
+
+\begin{figure*}[t]
+\centering
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[
+  box/.style={draw,rounded corners=2pt,align=center,minimum height=13mm,font=\small},
+  branch/.style={box,text width=66mm},
+  arr/.style={-{Stealth[length=2mm]},semithick},
+  lab/.style={font=\scriptsize,align=center,fill=white,inner sep=2pt}
+]
+\node[box,text width=22mm] (input) at (0,0) {Cleaned\\comment};
+\node[branch] (sparse) at (6,1.6) {\textbf{Sparse representation}\\Word-level TF--IDF (unigrams + bigrams)\\1 configuration};
+\node[branch,minimum height=22mm] (dense) at (6,-1.6) {\textbf{Dense representations}\\Pretrained embeddings $\rightarrow$ pooling\\5 sources $\times$ 6 strategies = 30 configurations};
+\node[box,text width=41mm,minimum height=22mm] (lr) at (14,0) {\textbf{One-vs-rest logistic regression}\\One binary classifier per label};
+\node[box,text width=23mm] (out) at (18.4,0) {Six label\\scores};
+
+\draw[semithick] (input.east) -- (1.7,0);
+\draw[arr] (1.7,0) |- (sparse.west);
+\draw[arr] (1.7,0) |- (dense.west);
+\node[lab] at (1.7,0.35) {either};
+\draw[arr] (sparse.east) -- (10.5,1.6)
+  -- (10.5,0.55) -- ([yshift=5.5mm]lr.west);
+\node[lab] at (10.6,1.95) {Sparse features};
+\draw[arr] (dense.east) -- (10.5,-1.6)
+  -- (10.5,-0.55) -- ([yshift=-5.5mm]lr.west);
+\node[lab] at (10.6,-1.95) {Dense features};
+\draw[arr] (lr.east) -- node[lab,above] {predict} (out.west);
+\node[font=\scriptsize,align=center,text width=46mm] at (14,-2.35)
+  {Same classifier family; fitted separately\\for each representation configuration};
+\end{tikzpicture}%
+}
+\caption{Representation comparison for RQ1. Each comment is represented using either word-level TF--IDF or a pretrained embedding source combined with a pooling strategy. Each configuration is evaluated separately with one-vs-rest logistic regression, producing six label-specific scores for holdout Macro ROC-AUC evaluation. The two branches denote alternative representations and are not concatenated.}
+\label{fig:rq1-representations}
+\end{figure*}

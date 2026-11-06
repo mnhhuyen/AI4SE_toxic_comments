@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 780" role="img" aria-labelledby="title desc">
+<title id="title">RQ3: RoBERTa versus RoBERTa with label dependencies</title><desc id="desc">Two separately trained variants use the same pretrained RoBERTa backbone architecture. The baseline maps the first-token representation to six scores. The label-dependency variant projects it into six label vectors, aggregates neighbors using a fixed training-label co-occurrence matrix, and scores the updated vectors. Training labels supply the graph only; held-out labels are never used.</desc>
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#506879"/></marker></defs>
+<rect width="1600" height="780" fill="#ffffff"/>
+<g font-family="Arial, Helvetica, sans-serif" fill="#193448">
+<text x="42" y="48" font-size="18" font-weight="700" letter-spacing="2" fill="#526b7b">3. METHOD · RQ3</text>
+<text x="42" y="98" font-size="36" font-weight="700">Does an explicit label graph improve RoBERTa?</text>
+<text x="42" y="137" font-size="21" fill="#526b7b">Same backbone architecture and training protocol; different classification heads.</text>
+<rect x="42" y="328" width="215" height="155" rx="8" fill="#eff3f6" stroke="#bccbd6" stroke-width="2"/>
+<text x="149" y="364" text-anchor="middle" font-size="21">Comment tokens</text><text x="149" y="405" text-anchor="middle" font-size="27" font-weight="700">RoBERTa</text><text x="149" y="446" text-anchor="middle" font-size="20">First-token &lt;s&gt;</text><text x="149" y="472" text-anchor="middle" font-size="18">representation h</text>
+<path d="M257 405H292V270H340 M292 405V500H340" fill="none" stroke="#506879" stroke-width="2.5" marker-end="url(#a)"/>
+<path d="M305 270H340" fill="none" stroke="#506879" stroke-width="2.5" marker-end="url(#a)"/>
+<rect x="340" y="207" width="1208" height="126" rx="9" fill="#edf5fb" stroke="#33739f" stroke-width="2"/>
+<text x="365" y="240" font-size="17" font-weight="700" fill="#33739f">BASELINE · RoBERTa</text>
+<text x="395" y="283" font-size="24" font-weight="700">Classification head</text>
+<path d="M660 274H1275" fill="none" stroke="#506879" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="970" y="263" text-anchor="middle" font-size="17" fill="#526b7b">predict independently scored labels</text>
+<text x="1310" y="282" font-size="23" font-weight="700">6 label scores</text>
+<rect x="340" y="435" width="1208" height="160" rx="9" fill="#edf8f6" stroke="#207e72" stroke-width="2"/>
+<text x="365" y="467" font-size="17" font-weight="700" fill="#207e72">VARIANT · RoBERTa + LABEL DEPENDENCIES</text>
+<text x="380" y="510" font-size="23" font-weight="700">Label projections</text><text x="380" y="542" font-size="19">6 label-specific vectors</text><text x="380" y="570" font-size="18" fill="#526b7b">h → H₁, …, H₆</text>
+<path d="M630 514H700" fill="none" stroke="#506879" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="720" y="510" font-size="23" font-weight="700">Graph message passing</text><text x="720" y="542" font-size="19">Weighted neighbor aggregation</text><text x="720" y="570" font-size="18" fill="#526b7b">Update each label vector</text>
+<path d="M1040 514H1083" fill="none" stroke="#506879" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="1100" y="510" font-size="23" font-weight="700">Scoring</text><text x="1100" y="542" font-size="19">+ sigmoid</text>
+<path d="M1220 514H1280" fill="none" stroke="#506879" stroke-width="2.5" marker-end="url(#a)"/>
+<text x="1310" y="522" font-size="23" font-weight="700">6 label scores</text>
+<rect x="700" y="641" width="380" height="65" rx="7" fill="#ffffff" stroke="#207e72" stroke-width="2" stroke-dasharray="7 4"/>
+<text x="890" y="666" text-anchor="middle" font-size="19" font-weight="700">Training-label co-occurrence</text><text x="890" y="692" text-anchor="middle" font-size="17" fill="#526b7b">Fixed adjacency A · no self-edges</text>
+<path d="M890 641V595" fill="none" stroke="#506879" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#a)"/>
+<text x="905" y="624" font-size="16" fill="#526b7b">supplies graph weights</text>
+<text x="42" y="548" font-size="17" fill="#526b7b">Two separate models;</text><text x="42" y="574" font-size="17" fill="#526b7b">not shared fitted weights.</text>
+<path d="M42 729H1548" stroke="#ccd9e2" stroke-width="1.5"/>
+<text x="42" y="761" font-size="19" fill="#526b7b">Binary cross-entropy · Five-fold evaluation · Macro ROC-AUC · Graph estimated from training labels only</text>
+</g></svg>
